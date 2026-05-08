@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity, Platform, Dimensions } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { colors, spacing, fonts, borderRadius, shadows } from '../theme/colors';
 import CompactTimeStats from './CompactTimeStats';
@@ -33,6 +33,9 @@ const CircularProgressChart: React.FC<CircularProgressChartProps> = ({
   const [animatedValues] = useState(data.map(() => new Animated.Value(0)));
   const [pressedIndex, setPressedIndex] = useState<number | null>(null);
 
+  // Detect low-end devices for simplified animations
+  const isLowEndDevice = Platform.OS === 'android' || Dimensions.get('window').width < 360;
+
   const total = data.reduce((sum, item) => sum + item.value, 0);
   
   // Glassmorphism theme colors
@@ -61,20 +64,21 @@ const CircularProgressChart: React.FC<CircularProgressChartProps> = ({
   const getCircumference = (radius: number) => 2 * Math.PI * radius;
 
   useEffect(() => {
-    if (showAnimation) {
-      const animations = data.map((_, index) => 
+    if (showAnimation && !isLowEndDevice) {
+      const animations = data.map((_, index) =>
         Animated.timing(animatedValues[index], {
           toValue: 1,
-          duration: 1000 + index * 300,
+          duration: 600 + index * 150, // Reduced duration for better performance
           useNativeDriver: false,
         })
       );
-      
-      Animated.stagger(200, animations).start();
+
+      Animated.stagger(100, animations).start(); // Reduced stagger delay
     } else {
+      // Disable animations for low-end devices or when showAnimation is false
       animatedValues.forEach(value => value.setValue(1));
     }
-  }, [showAnimation]);
+  }, [showAnimation, isLowEndDevice]);
 
   const handleSegmentPress = (index: number, item: any) => {
     if (!interactive) return;

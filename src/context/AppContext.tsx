@@ -23,6 +23,7 @@ interface AppContextType {
   setDepartment: (department: string) => Promise<void>;
   exportData: () => Promise<boolean>;
   importData: () => Promise<boolean>;
+  addSessions: (sessions: Session[]) => Promise<boolean>;
   completeOnboarding: () => Promise<void>;
   updateOnboardingProgress: (step: number) => Promise<void>;
   resetOnboardingProgress: () => Promise<void>;
@@ -510,6 +511,30 @@ export const Provider = ({ children }: AppProviderProps) => {
     }
   };
 
+  const addSessions = async (newSessions: Session[]): Promise<boolean> => {
+    try {
+      // Filter out duplicates based on checkInTime
+      const existingCheckInTimes = new Set(appData.sessions.map(s => s.checkInTime));
+      const filteredSessions = newSessions.filter(session => !existingCheckInTimes.has(session.checkInTime));
+
+      if (filteredSessions.length === 0) {
+        return false; // No new sessions to add
+      }
+
+      const newData: AppData = {
+        ...appData,
+        sessions: [...appData.sessions, ...filteredSessions]
+      };
+
+      setAppData(newData);
+      await saveDataDirect(newData);
+      return true;
+    } catch (error) {
+      console.log('Error adding sessions:', error);
+      return false;
+    }
+  };
+
   const importData = async (): Promise<boolean> => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -755,6 +780,7 @@ export const Provider = ({ children }: AppProviderProps) => {
     setDepartment,
     exportData,
     importData,
+    addSessions,
     completeOnboarding,
     updateOnboardingProgress,
     resetOnboardingProgress,

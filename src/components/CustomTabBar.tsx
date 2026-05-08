@@ -1,7 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { View, TouchableOpacity, Animated, StyleSheet, Platform, Pressable, Text } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, Platform, Pressable, ScrollView } from 'react-native';
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg';
-import { useLanguage } from '../context/LanguageContext';
 
 // Navbar colors - Green Dark Theme
 const NAVBAR_COLORS = {
@@ -17,47 +16,16 @@ const NAVBAR_COLORS = {
 // Animation duration matching the CSS transition (0.4s = 400ms)
 const ANIMATION_DURATION = 400;
 
-// Tab Item Component with Animation
+// Tab Item Component
 interface TabItemProps {
   icon: React.ReactNode;
-  label: string;
   isActive: boolean;
   onPress: () => void;
 }
 
-const TabItem: React.FC<TabItemProps> = ({ icon, label, isActive, onPress }) => {
-  // Animated values for text expansion
-  const textWidthAnim = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-  const marginLeftAnim = useRef(new Animated.Value(0)).current;
-  const paddingRightAnim = useRef(new Animated.Value(10)).current;
-  
+const TabItem: React.FC<TabItemProps> = ({ icon, isActive, onPress }) => {
   // Track hover state for non-active items
   const [isHovered, setIsHovered] = useState(false);
-
-  useEffect(() => {
-    // Parallel animations for smooth transition matching CSS
-    Animated.parallel([
-      // Opacity animation for text
-      Animated.timing(opacityAnim, {
-        toValue: isActive ? 1 : 0,
-        duration: ANIMATION_DURATION,
-        useNativeDriver: false,
-      }),
-      // Margin left animation for text
-      Animated.timing(marginLeftAnim, {
-        toValue: isActive ? 10 : 0,
-        duration: ANIMATION_DURATION,
-        useNativeDriver: false,
-      }),
-      // Padding right animation for container
-      Animated.timing(paddingRightAnim, {
-        toValue: isActive ? 20 : 10,
-        duration: ANIMATION_DURATION,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }, [isActive]);
 
   // Determine background color based on state
   const getBackgroundColor = () => {
@@ -76,32 +44,16 @@ const TabItem: React.FC<TabItemProps> = ({ icon, label, isActive, onPress }) => 
         pressed && styles.tabItemPressed,
       ]}
     >
-      <Animated.View
+      <View
         style={[
           styles.tabItem,
           {
             backgroundColor: getBackgroundColor(),
-            paddingRight: paddingRightAnim,
           },
         ]}
       >
         {icon}
-        {isActive && (
-          <Animated.Text
-            style={[
-              styles.navText,
-              {
-                opacity: opacityAnim,
-                marginLeft: marginLeftAnim,
-                color: NAVBAR_COLORS.activeIcon,
-              },
-            ]}
-            numberOfLines={1}
-          >
-            {label}
-          </Animated.Text>
-        )}
-      </Animated.View>
+      </View>
     </Pressable>
   );
 };
@@ -196,14 +148,14 @@ const MoreIcon = ({ color, filled }: { color: string; filled: boolean }) => (
 );
 
 // Tab configuration
-const getTabs = (t: (key: string) => string) => [
-  { name: 'TimeClock', labelKey: 'nav.timeclock', icon: HomeIcon },
-  { name: 'DailyLog', labelKey: 'nav.dailylog', icon: DocumentIcon },
-  { name: 'MonthlyReport', labelKey: 'nav.monthlyreport', icon: ChartIcon },
-  { name: 'History', labelKey: 'nav.history', icon: HistoryIcon },
-  { name: 'Analytics', labelKey: 'nav.analytics', icon: AnalyticsIcon },
-  { name: 'Profile', labelKey: 'nav.profile', icon: UserIcon },
-  { name: 'More', labelKey: 'nav.more', icon: MoreIcon },
+const getTabs = () => [
+  { name: 'TimeClock', icon: HomeIcon },
+  { name: 'DailyLog', icon: DocumentIcon },
+  { name: 'MonthlyReport', icon: ChartIcon },
+  { name: 'History', icon: HistoryIcon },
+  { name: 'Analytics', icon: AnalyticsIcon },
+  { name: 'Profile', icon: UserIcon },
+  { name: 'More', icon: MoreIcon },
 ];
 
 interface CustomTabBarProps {
@@ -212,56 +164,57 @@ interface CustomTabBarProps {
 }
 
 const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, navigation }) => {
-  const { t } = useLanguage();
-  const tabs = getTabs(t);
+  const tabs = getTabs();
   
   return (
     <View style={styles.navbar}>
-      {state.routes.map((route: any, index: number) => {
-        const { name } = route;
-        const tab = tabs.find(t => t.name === name);
-        if (!tab) return null;
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.navbarScrollContent}
+      >
+        {state.routes.map((route: any, index: number) => {
+          const { name } = route;
+          const tab = tabs.find(t => t.name === name);
+          if (!tab) return null;
 
-        const isFocused = state.index === index;
-        const IconComponent = tab.icon;
-        const color = isFocused ? NAVBAR_COLORS.activeIcon : NAVBAR_COLORS.inactiveIcon;
+          const isFocused = state.index === index;
+          const IconComponent = tab.icon;
+          const color = isFocused ? NAVBAR_COLORS.activeIcon : NAVBAR_COLORS.inactiveIcon;
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
 
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(name);
-          }
-        };
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(name);
+            }
+          };
 
-        return (
-          <TabItem
-            key={name}
-            icon={<IconComponent color={color} filled={isFocused} />}
-            label={t(tab.labelKey)}
-            isActive={isFocused}
-            onPress={onPress}
-          />
-        );
-      })}
+          return (
+            <TabItem
+              key={name}
+              icon={<IconComponent color={color} filled={isFocused} />}
+              isActive={isFocused}
+              onPress={onPress}
+            />
+          );
+        })}
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   navbar: {
-    flexDirection: 'row',
     backgroundColor: NAVBAR_COLORS.navbarBackground,
     paddingVertical: 15,
     paddingHorizontal: 15,
     borderTopWidth: 1,
     borderTopColor: NAVBAR_COLORS.navbarBorder,
-    alignItems: 'center',
-    justifyContent: 'space-between',
     // Subtle green glow shadow matching CSS
     ...Platform.select({
       ios: {
@@ -275,6 +228,11 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  navbarScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8, // Add gap between tabs for better spacing
+  },
   tabItemTouchable: {
     // Container for touch handling
   },
@@ -287,11 +245,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 30, // Pill shape matching CSS border-radius: 30px
-  },
-  navText: {
-    fontWeight: '600',
-    fontSize: 14,
-    maxWidth: 100, // Matching CSS max-width: 100px
   },
 });
 

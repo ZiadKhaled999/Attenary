@@ -13,9 +13,14 @@ import { useApp } from '../context/AppContext';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 import { formatHoursMinutes, getDateString, formatTimeReversed } from '../utils/timeUtils';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
+import ComponentErrorBoundary from '../components/ComponentErrorBoundary';
 import { useLanguage } from '../context/LanguageContext';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+
+// Responsive scaling functions
+const scale = (size: number) => (width / 375) * size; // 375 is iPhone 6 width
+const verticalScale = (size: number) => (height / 667) * size; // 667 is iPhone 6 height
 
 // ═══════════════════════════════════════════════════════════════════
 // FUTURISTIC 2026 GLASSMORPHISM ICONS
@@ -73,28 +78,36 @@ const AnalyticsScreen = () => {
   const { t } = useLanguage();
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
 
-  // Calculate statistics
+  // Limit sessions for performance - sort by checkInTime descending and take recent 1000
+  const recentSessions = useMemo(() =>
+    appData.sessions
+      .sort((a: any, b: any) => b.checkInTime - a.checkInTime)
+      .slice(0, 1000),
+    [appData.sessions]
+  );
+
+  // Calculate statistics - limit to recent 1000 sessions for performance
   const stats = useMemo(() => {
-    const totalSessions = appData.sessions.length;
-    const activeSessions = appData.sessions.filter((s: any) => s.checkOutTime === null).length;
+    const activeSessions = recentSessions.filter((s: any) => s.checkOutTime === null).length;
+    const totalSessions = recentSessions.length;
     const completedSessions = totalSessions - activeSessions;
 
     let totalDuration = 0;
-    appData.sessions.forEach((session: any) => {
+    recentSessions.forEach((session: any) => {
       if (session.checkOutTime) {
         totalDuration += session.checkOutTime - session.checkInTime;
       }
     });
 
-    const avgSessionDuration = completedSessions > 0 
-      ? totalDuration / completedSessions 
+    const avgSessionDuration = completedSessions > 0
+      ? totalDuration / completedSessions
       : 0;
 
     // Calculate streaks
     const daysWithActivity = new Set(
-      appData.sessions.map((s: any) => getDateString(s.checkInTime))
+      recentSessions.map((s: any) => getDateString(s.checkInTime))
     );
-    
+
     return {
       totalSessions,
       activeSessions,
@@ -103,7 +116,7 @@ const AnalyticsScreen = () => {
       avgSessionDuration: Math.floor(avgSessionDuration / 1000),
       activeDays: daysWithActivity.size,
     };
-  }, [appData.sessions]);
+  }, [recentSessions]);
 
   return (
     <View style={styles.container}>
@@ -152,24 +165,26 @@ const AnalyticsScreen = () => {
         </View>
 
         {/* ═══════════════════════════════════════════════════════════
-            MAIN STATS - Large Glass Cards
-            ═══════════════════════════════════════════════════════════ */}
-        <View style={styles.mainStatsContainer}>
-          <View style={styles.mainStatCard}>
-            <View style={styles.mainStatGlow} />
-            <View style={styles.mainStatIconContainer}>
-              <ClockIcon size={24} color={colors.primary} />
-            </View>
-            <Text style={styles.mainStatLabel}>{t('analytics.totalHours')}</Text>
-            <Text style={styles.mainStatValue}>
-              {formatHoursMinutes(stats.totalDuration)}
-            </Text>
-            <View style={styles.trendIndicator}>
-              <TrendUpIcon size={16} />
-              <Text style={styles.trendText}>{t('analytics.trendText')}</Text>
-            </View>
-          </View>
-        </View>
+             MAIN STATS - Large Glass Cards
+             ═══════════════════════════════════════════════════════════ */}
+         <View style={styles.mainStatsContainer}>
+           <ComponentErrorBoundary>
+             <View style={styles.mainStatCard}>
+               <View style={styles.mainStatGlow} />
+               <View style={styles.mainStatIconContainer}>
+                 <ClockIcon size={24} color={colors.primary} />
+               </View>
+               <Text style={styles.mainStatLabel}>{t('analytics.totalHours')}</Text>
+               <Text style={styles.mainStatValue}>
+                 {formatHoursMinutes(stats.totalDuration)}
+               </Text>
+               <View style={styles.trendIndicator}>
+                 <TrendUpIcon size={16} />
+                 <Text style={styles.trendText}>{t('analytics.trendText')}</Text>
+               </View>
+             </View>
+           </ComponentErrorBoundary>
+         </View>
 
         {/* ═══════════════════════════════════════════════════════════
             STATS GRID - Glass Cards
@@ -237,7 +252,7 @@ const AnalyticsScreen = () => {
             </TouchableOpacity>
           </View>
           
-          {appData.sessions.length === 0 ? (
+          {recentSessions.length === 0 ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconContainer}>
                 <ChartIcon size={40} />
@@ -249,7 +264,7 @@ const AnalyticsScreen = () => {
             </View>
           ) : (
             <View style={styles.recentList}>
-              {appData.sessions.slice(-5).reverse().map((session: any, index: number) => (
+              {recentSessions.slice(0, 5).map((session: any, index: number) => (
                 <View 
                   key={session.sessionId} 
                   style={[
@@ -314,9 +329,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: spacing.xl,
-    paddingTop: spacing.huge,
-    paddingBottom: 120, // Extra padding to ensure content is visible above tab bar
+    padding: scale(spacing.xl),
+    paddingTop: verticalScale(spacing.huge),
+    paddingBottom: verticalScale(120), // Extra padding to ensure content is visible above tab bar
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -325,33 +340,33 @@ const styles = StyleSheet.create({
   headerSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: verticalScale(spacing.xxl),
   },
   headerIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(16),
     backgroundColor: colors.bgCard,
     borderWidth: 1,
     borderColor: colors.borderAccent,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.lg,
+    marginRight: scale(spacing.lg),
     ...shadows.neonGlowSubtle,
   },
   headerTextContainer: {
     flex: 1,
   },
   title: {
-    fontSize: fonts.sizes.hero,
+    fontSize: scale(fonts.sizes.hero),
     fontWeight: '700' as const,
     color: colors.textPrimary,
     letterSpacing: -1,
   },
   subtitle: {
-    fontSize: fonts.sizes.md,
+    fontSize: scale(fonts.sizes.md),
     color: colors.textSecondary,
-    marginTop: spacing.xs,
+    marginTop: scale(spacing.xs),
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -390,12 +405,12 @@ const styles = StyleSheet.create({
   // MAIN STATS
   // ═══════════════════════════════════════════════════════════════
   mainStatsContainer: {
-    marginBottom: spacing.xl,
+    marginBottom: verticalScale(spacing.xl),
   },
   mainStatCard: {
     backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.card,
-    padding: spacing.xxl,
+    borderRadius: scale(borderRadius.card),
+    padding: scale(spacing.xxl),
     alignItems: 'center',
     borderWidth: 1.5,
     borderColor: colors.borderAccent,
@@ -406,34 +421,34 @@ const styles = StyleSheet.create({
   mainStatGlow: {
     position: 'absolute',
     top: -100,
-    width: 300,
-    height: 200,
+    width: scale(300),
+    height: verticalScale(200),
     backgroundColor: colors.primaryGlow,
-    borderRadius: 150,
+    borderRadius: scale(150),
     opacity: 0.2,
   },
   mainStatIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(16),
     backgroundColor: 'rgba(0, 255, 136, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: verticalScale(spacing.lg),
   },
   mainStatLabel: {
-    fontSize: fonts.sizes.sm,
+    fontSize: scale(fonts.sizes.sm),
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
-    marginBottom: spacing.sm,
+    marginBottom: verticalScale(spacing.sm),
   },
   mainStatValue: {
-    fontSize: fonts.sizes.massive,
+    fontSize: scale(fonts.sizes.massive),
     fontWeight: '900' as const,
     color: colors.primary,
     fontFamily: 'monospace',
-    marginBottom: spacing.md,
+    marginBottom: verticalScale(spacing.md),
   },
   trendIndicator: {
     flexDirection: 'row',

@@ -7,13 +7,21 @@ import {
   TouchableOpacity,
   StatusBar,
   Image,
+  Dimensions,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 import { formatHoursMinutes, getDateString, getMonthString, formatTimeReversed } from '../utils/timeUtils';
 import CircularProgressChart from '../components/CircularProgressChart';
+import ComponentErrorBoundary from '../components/ComponentErrorBoundary';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useLanguage } from '../context/LanguageContext';
+
+const { width, height } = Dimensions.get('window');
+
+// Responsive scaling functions
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 667) * size;
 
 // ═══════════════════════════════════════════════════════════════════
 // FUTURISTIC 2026 GLASSMORPHISM ICONS
@@ -47,7 +55,12 @@ const MonthlyReportScreen = () => {
   const [selectedMonth, setSelectedMonth] = useState(getMonthString(new Date()));
 
   const monthlyData = useMemo(() => {
-    const sessions = appData.sessions.filter((s: any) => {
+    // Limit to recent 1000 sessions for performance before filtering by month
+    const recentSessions = appData.sessions
+      .sort((a: any, b: any) => b.checkInTime - a.checkInTime)
+      .slice(0, 1000);
+
+    const sessions = recentSessions.filter((s: any) => {
       const sessionMonth = getMonthString(new Date(s.checkInTime));
       return sessionMonth === selectedMonth;
     });
@@ -221,14 +234,16 @@ const MonthlyReportScreen = () => {
         </View>
 
         {/* ═══════════════════════════════════════════════════════════
-            CIRCULAR PROGRESS CHART
-            ═══════════════════════════════════════════════════════════ */}
-        <View style={styles.chartSection}>
-          <CircularProgressChart
-            data={chartData}
-            title={t('monthlyreport.progress').replace('{month}', selectedMonth)}
-          />
-        </View>
+             CIRCULAR PROGRESS CHART
+             ═══════════════════════════════════════════════════════════ */}
+         <View style={styles.chartSection}>
+           <ComponentErrorBoundary>
+             <CircularProgressChart
+               data={chartData}
+               title={t('monthlyreport.progress').replace('{month}', selectedMonth)}
+             />
+           </ComponentErrorBoundary>
+         </View>
 
         {/* ═══════════════════════════════════════════════════════════
             DAILY BREAKDOWN - Glass Cards
@@ -308,9 +323,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: spacing.xl,
-    paddingTop: spacing.huge,
-    paddingBottom: 120, // Extra padding to ensure content is visible above tab bar
+    padding: scale(spacing.xl),
+    paddingTop: verticalScale(spacing.huge),
+    paddingBottom: verticalScale(120), // Extra padding to ensure content is visible above tab bar
   },
 
   // ═══════════════════════════════════════════════════════════════
