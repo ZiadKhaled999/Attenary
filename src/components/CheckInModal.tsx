@@ -180,17 +180,18 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.bgGlassLight,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primaryGlow,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     alignItems: 'center',
+    ...shadows.neonGlowSubtle,
   },
   cancelButtonText: {
     fontSize: fonts.sizes.md,
     fontWeight: fonts.weights.medium as any,
-    color: colors.textSecondary,
+    color: colors.textPrimary,
   },
 });
 

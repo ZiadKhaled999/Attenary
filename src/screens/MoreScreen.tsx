@@ -76,20 +76,20 @@ const ChevronRightIcon = ({ size = 20 }: { size?: number }) => (
   </Svg>
 );
 
-const DownloadIcon = ({ size = 24 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke={colors.textPrimary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M7 10l5 5 5-5" stroke={colors.textPrimary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M12 15V3" stroke={colors.textPrimary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
+const ExportIcon = ({ size = 24 }: { size?: number }) => (
+  <Image
+    source={require('../../assets/icons/export.png')}
+    style={{ width: size, height: size }}
+    resizeMode="contain"
+  />
 );
 
-const UploadIcon = ({ size = 24 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke={colors.textPrimary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M17 8l-5-5-5 5" stroke={colors.textPrimary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M12 3v12" stroke={colors.textPrimary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
+const ImportIcon = ({ size = 24 }: { size?: number }) => (
+  <Image
+    source={require('../../assets/icons/import.png')}
+    style={{ width: size, height: size }}
+    resizeMode="contain"
+  />
 );
 
 // Navigation item type
@@ -160,14 +160,14 @@ const MoreScreen = () => {
       id: 'export',
       title: 'Export Data',
       subtitle: 'Export your time tracking data',
-      icon: <DownloadIcon size={32} />,
+      icon: <ExportIcon size={32} />,
       onPress: () => setIsExportModalVisible(true),
     },
     {
       id: 'import',
       title: 'Import Data',
       subtitle: 'Import time tracking data from file',
-      icon: <UploadIcon size={32} />,
+      icon: <ImportIcon size={32} />,
       onPress: () => setIsImportModalVisible(true),
     },
   ];
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
   },
   modalSubtitle: {
     fontSize: fonts.sizes.sm,
-    color: colors.textMuted,
+    color: colors.textSecondary,
     marginBottom: spacing.lg,
   },
   modalSection: {
@@ -895,7 +895,7 @@ const styles = StyleSheet.create({
   },
   selectedFileHint: {
     fontSize: fonts.sizes.sm,
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   modalActions: {
     flexDirection: 'row',

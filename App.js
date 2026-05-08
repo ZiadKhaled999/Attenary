@@ -7,6 +7,34 @@ import { Provider } from './src/context/AppContext';
 import Navigation from './src/navigation/Navigation';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { LanguageProvider } from './src/context/LanguageContext';
+import { colors } from './src/theme/colors';
+import Svg, { Path, Polygon, Line } from 'react-native-svg';
+
+const WarningIcon = ({ color = colors.textMuted, size = 48 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Polygon 
+      points="12,2 22,12 12,22 2,12" 
+      stroke={color} 
+      strokeWidth="2"
+      fill="none"
+    />
+    <Line 
+      x1="12" 
+      y1="8" 
+      x2="12" 
+      y2="12" 
+      stroke={color} 
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <Circle 
+      cx="12" 
+      cy="16" 
+      r="1" 
+      fill={color}
+    />
+  </Svg>
+);
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -40,7 +68,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <ScrollView style={styles.errorContainer} contentContainerStyle={styles.errorContent}>
-          <Text style={styles.errorIcon}>⚠️</Text>
+          <WarningIcon color={colors.danger} size={48} style={{ marginBottom: 16 }} />
           <Text style={styles.errorTitle}>App Crashed</Text>
           <Text style={styles.errorMessage}>
             {this.state.error?.message || 'An unexpected error occurred'}
@@ -59,9 +87,10 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function App() {
+  const Container = Platform.OS === 'web' ? View : GestureHandlerRootView;
   return (
     <ErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <Container style={{ flex: 1 }}>
         <SafeAreaProvider>
           <ThemeProvider>
             <LanguageProvider>
@@ -72,7 +101,7 @@ export default function App() {
             </LanguageProvider>
           </ThemeProvider>
         </SafeAreaProvider>
-      </GestureHandlerRootView>
+      </Container>
     </ErrorBoundary>
   );
 }
