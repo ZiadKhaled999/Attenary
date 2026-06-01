@@ -65,8 +65,7 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (res.error) throw res.error;
       const p = res.data as Profile;
       setProfile(p);
-      const currentDb = await getDb();
-      try { await currentDb.profiles.put(p); } catch (e) { console.log('Local profile cache error (non-critical):', e); }
+      getDb().then(currentDb => currentDb.profiles.put(p).catch((e) => console.log('Local profile cache error (non-critical):', e))).catch((e) => console.log('getDb error (non-critical):', e));
     } catch (e) {
       console.log('refreshProfile error (non-critical):', e);
     }
@@ -74,15 +73,22 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     let unsubscribeNetInfo: (() => void) | undefined;
+    const subscriptionRef = { current: null as (() => void) | null };
     const init = async () => {
       try {
-        await getDb();
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, sessionState) => {
-          setSession(sessionState);
-          if (sessionState?.user?.id) await refreshProfile();
-          else setProfile(null);
-          setLoading(false);
+          try {
+            setSession(sessionState);
+            if (sessionState?.user?.id) await refreshProfile();
+            else setProfile(null);
+          } catch (e) {
+            console.log('Auth state change error:', e);
+            setProfile(null);
+          } finally {
+            setLoading(false);
+          }
         });
+        subscriptionRef.current = subscription.unsubscribe.bind(subscription);
 
         const { data: { session: initial } } = await supabase.auth.getSession();
         setSession(initial);
@@ -91,38 +97,55 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         await updateOnlineStatus();
         unsubscribeNetInfo = NetInfo.addEventListener(state => setIsOnline(state.isConnected ?? false));
-
-        return () => {
-          subscription.unsubscribe();
-          if (unsubscribeNetInfo) unsubscribeNetInfo();
-        };
       } catch (e) {
         console.log('Supabase init error (non-critical):', e);
         setLoading(false);
       }
     };
     init();
+    return () => {
+      if (subscriptionRef.current) subscriptionRef.current();
+      if (unsubscribeNetInfo) unsubscribeNetInfo();
+    };
   }, [refreshProfile, updateOnlineStatus, getDb]);
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
     try {
-      const currentDb = await getDb();
-      await currentDb.syncQueue.insert({ user_id: email, entity_type: 'profile', entity_id: '', operation: 'upsert', payload: { email }, file_path: '', retry_count: 0 });
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (!error) {
+        const queueSync = async () => {
+          try {
+            const currentDb = await getDb();
+            await currentDb.syncQueue.insert({ user_id: email, entity_type: 'profile', entity_id: '', operation: 'upsert', payload: { email }, file_path: '', retry_count: 0 });
+          } catch (e) { console.log('syncQueue insert error (non-critical):', e); }
+        };
+        void queueSync();
+      }
+      return { error };
     } catch (e) {
-      console.log('syncQueue insert error (non-critical):', e);
+      console.log('signUp error:', e);
+      return { error: e || 'Sign up failed' };
     }
-    return { error };
   };
 
   const verifyOtp = async (email: string, token: string) => {
-    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
-    return { error };
+    try {
+      const { error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
+      return { error };
+    } catch (e) {
+      console.log('verifyOtp error:', e);
+      return { error: e || 'Verification failed' };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error };
+    } catch (e) {
+      console.log('signIn error:', e);
+      return { error: e || 'Sign in failed' };
+    }
   };
 
   const signOut = async () => {

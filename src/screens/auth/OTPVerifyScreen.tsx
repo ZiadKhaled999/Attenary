@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, StatusBar, Keyboar
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSupabase } from '../../context/SupabaseContext';
 import { colors, spacing, borderRadius, fonts } from '../../theme/colors';
+import { supabase } from '../../config/supabase';
 
 const OTPVerifyScreen = () => {
   const navigation = useNavigation<any>();
@@ -26,18 +27,27 @@ const OTPVerifyScreen = () => {
     if (!code || code.length !== 6) { setError('Please enter the 6-digit code'); return; }
     setLoading(true);
     setError('');
-    const { error } = await verifyOtp(email, code);
-    if (error) {
-      setError(error.message || 'Invalid or expired code. Please try again.');
+    try {
+      const { error } = await verifyOtp(email, code);
+      if (error) {
+        setError(error.message || 'Invalid or expired code. Please try again.');
+        return;
+      }
+      navigation.replace('Onboarding');
+    } catch {
+      setError('Verification failed. Please check your network and try again.');
+    } finally {
       setLoading(false);
-      return;
     }
-    navigation.replace('Onboarding');
   };
 
   const handleResend = async () => {
     setError('');
     setResendCooldown(30);
+    const { error } = await supabase.auth.resend({ email, type: 'signup' });
+    if (error) {
+      setError(error.message || 'Failed to resend code. Please try again.');
+    }
   };
 
   return (

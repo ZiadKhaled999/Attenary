@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, StatusBar, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSupabase } from '../../context/SupabaseContext';
 import { colors, spacing, borderRadius, fonts } from '../../theme/colors';
@@ -26,13 +26,19 @@ const SignUpScreen = () => {
     if (!validate()) return;
     setLoading(true);
     setError('');
-    const { error } = await signUp(email.trim().toLowerCase(), password);
-    if (error) {
-      setError(error.message || 'Sign up failed. Please try again.');
+    try {
+      const { error } = await signUp(email.trim().toLowerCase(), password);
+      if (error) {
+        setError(error.message || 'Sign up failed. Please try again.');
+        return;
+      }
       setLoading(false);
-      return;
+      navigation.navigate('OTPVerify', { email: email.trim().toLowerCase() } as never);
+    } catch {
+      setError('Sign up failed. Please check your network and try again.');
+    } finally {
+      setLoading(false);
     }
-    navigation.navigate('OTPVerify', { email: email.trim().toLowerCase() } as never);
   };
 
   return (
@@ -61,7 +67,7 @@ const SignUpScreen = () => {
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <TouchableOpacity style={[styles.button, styles.primaryButton, loading ? styles.buttonDisabled : null]} onPress={handleSignUp} disabled={loading} activeOpacity={0.85}>
-            <Text style={styles.primaryButtonText}>{loading ? 'Creating Account...' : 'Sign Up'}</Text>
+            {loading ? <ActivityIndicator color={colors.bgMain} /> : <Text style={styles.primaryButtonText}>Sign Up</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.linkButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>

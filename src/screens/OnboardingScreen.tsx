@@ -62,7 +62,7 @@ const OnboardingScreen = () => {
     if (profile?.onboarding_completed) {
       navigation.replace('Main');
     }
-  }, []);
+  }, [profile?.onboarding_completed]);
 
   const saveField = async (field: 'full_name' | 'email' | 'job_title' | 'department', value: string) => {
     setSaving(true);

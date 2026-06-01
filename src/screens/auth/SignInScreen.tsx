@@ -16,11 +16,16 @@ const SignInScreen = () => {
     if (!email.trim() || !password) { setError('Please enter both email and password'); return; }
     setLoading(true);
     setError('');
-    const { error } = await signIn(email.trim().toLowerCase(), password);
-    if (error) {
-      setError(error.message || 'Sign in failed. Please check your credentials.');
+    try {
+      const { error } = await signIn(email.trim().toLowerCase(), password);
+      if (error) {
+        setError(error.message || 'Sign in failed. Please check your credentials.');
+        return;
+      }
+    } catch {
+      setError('Sign in failed. Please check your network and try again.');
+    } finally {
       setLoading(false);
-      return;
     }
   };
 
