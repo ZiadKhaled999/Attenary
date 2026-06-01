@@ -23,7 +23,7 @@ import FeedbacksScreen from '../screens/FeedbacksScreen';
 import AuthGateScreen from '../screens/auth/AuthGateScreen';
 import SignInScreen from '../screens/auth/SignInScreen';
 import SignUpScreen from '../screens/auth/SignUpScreen';
-import OTPVerifyScreen from '../screens/auth/OTPVerifyScreen';
+import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
 
 import CheckInModal from '../components/CheckInModal';
 import CheckOutModal from '../components/CheckOutModal';
@@ -58,7 +58,7 @@ type MainStackParamList = {
   AuthGate: undefined;
   SignIn: undefined;
   SignUp: undefined;
-  OTPVerify: { email: string };
+  VerifyEmail: { email: string };
   Onboarding: undefined;
   Main: undefined;
   CheckInModal: undefined;
@@ -116,7 +116,7 @@ const Navigation = () => {
             <Stack.Screen name="AuthGate" component={AuthGateScreen} options={{ headerShown: false }} />
             <Stack.Screen name="SignIn" component={SignInScreen} options={{ headerShown: false }} />
             <Stack.Screen name="SignUp" component={SignUpScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ headerShown: false }} />
           </>
         )}
         <Stack.Screen

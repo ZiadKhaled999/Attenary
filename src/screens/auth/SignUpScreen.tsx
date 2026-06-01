@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, StatusBar, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, StatusBar, KeyboardAvoidingView, Platform, ActivityIndicator, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSupabase } from '../../context/SupabaseContext';
 import { useSignUp } from '@clerk/clerk-expo';
@@ -7,21 +7,15 @@ import { colors, spacing, borderRadius, fonts } from '../../theme/colors';
 
 const SignUpScreen = () => {
   const navigation = useNavigation<any>();
-  const { signUp, resendOtp, checkEmailRegistered } = useSupabase();
+  const { signUp } = useSupabase();
   const { signUp: signUpClerk, isLoaded } = useSignUp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [resentMessage, setResentMessage] = useState('');
   const [signupCooldown, setSignupCooldown] = useState(0);
-  const SIGNUP_COOLDOWN_SECONDS = 15;
-
-  const isRateLimited = (err: any) => {
-    const msg = (err?.message || err?.error_description || err?.msg || '').toLowerCase();
-    return msg.includes('429') || msg.includes('rate limit') || msg.includes('too many requests');
-  };
+  const SIGNUP_COOLDOWN_SECONDS = 5;
 
   useEffect(() => {
     if (signupCooldown <= 0) return;
@@ -38,7 +32,7 @@ const SignUpScreen = () => {
     return true;
   };
 
-   const handleSignUp = async () => {
+  const handleSignUp = async () => {
     if (!validate()) return;
     if (!isLoaded) {
       setError('Auth is still loading. Please try again.');
@@ -47,34 +41,24 @@ const SignUpScreen = () => {
     setLoading(true);
     setSignupCooldown(SIGNUP_COOLDOWN_SECONDS);
     setError('');
-    setResentMessage('');
     try {
-      const { registered, error: checkError } = await checkEmailRegistered(email.trim().toLowerCase());
-      if (checkError) {
-        setError('Unable to verify email. Please check your connection and try again.');
-        return;
-      }
-      if (registered) {
-        setError('This email is already registered. Please sign in instead.');
-        return;
+      const normalizedEmail = email.trim().toLowerCase();
+      const result = await signUpClerk.create({
+        emailAddress: normalizedEmail,
+        password,
+      });
+      console.log('[SignUpScreen] signUpClerk.create result:', JSON.stringify(result, null, 2));
+      if (
+        result.status === 'complete' ||
+        result.status === 'needsVerification' ||
+        result.status === 'missing_requirements'
+      ) {
+        navigation.replace('VerifyEmail', { email: normalizedEmail } as never);
       } else {
-        const result = await signUpClerk.create({
-          emailAddress: email.trim().toLowerCase(),
-          password,
-        });
-        if (result.status === 'complete') {
-          await setActive({ session: result.createdSessionId });
-        } else {
-          setError('Sign up incomplete. Please check your email to verify your account.');
-        }
+        setError(`Sign up could not be started. Status: ${result.status}. Please try again.`);
       }
     } catch (err: any) {
-      if (isRateLimited(err)) {
-        setSignupCooldown(120);
-        setError('Too many sign-up requests. Please wait 2 minutes and try again.');
-      } else {
-        setError(err?.message || 'Sign up failed. Please check your network and try again.');
-      }
+      setError(err?.message || 'Sign up failed. Please check your network and try again.');
     } finally {
       setLoading(false);
     }
