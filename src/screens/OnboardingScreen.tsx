@@ -12,11 +12,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
-import { useApp } from '../context/AppContext';
+import { useSupabase } from '../context/SupabaseContext';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, fonts } from '../theme/colors';
 import { useLanguage, Language } from '../context/LanguageContext';
+import * as ImagePicker from 'expo-image-picker';
 
 const { width, height } = Dimensions.get('window');
 
@@ -49,25 +51,55 @@ const OnboardingScreen = () => {
   });
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
   const [inputError, setInputError] = useState('');
+  const [saving, setSaving] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  
+
   const navigation: any = useNavigation();
-  const { 
-    completeOnboarding, 
-    updateOnboardingProgress,
-    setEmployeeName,
-    setEmail,
-    setJobTitle,
-    setDepartment,
-  } = useApp();
+  const { profile, updateProfile, uploadAvatar } = useSupabase();
   const { setLanguage } = useLanguage();
-  const { appData } = useApp();
 
   useEffect(() => {
-    if (appData.onboardingCompleted) {
+    if (profile?.onboarding_completed) {
       navigation.replace('Main');
     }
   }, []);
+
+  const saveField = async (field: 'full_name' | 'email' | 'job_title' | 'department', value: string) => {
+    setSaving(true);
+    const { error } = await updateProfile({ [field]: value });
+    setSaving(false);
+    if (error) {
+      Alert.alert('Error', 'Failed to save profile. Please try again.');
+    }
+  };
+
+  const handlePickAvatar = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    const asset = result.assets[0];
+    setSaving(true);
+    const { url, error } = await uploadAvatar(asset.uri);
+    setSaving(false);
+    if (error) {
+      Alert.alert('Error', 'Failed to upload avatar. It will sync when you are back online.');
+    }
+  };
+
+  const markOnboardingComplete = async () => {
+    setSaving(true);
+    const { error } = await updateProfile({ onboarding_completed: true });
+    setSaving(false);
+    if (error) {
+      Alert.alert('Error', 'Failed to complete onboarding. Please try again.');
+      return false;
+    }
+    return true;
+  };
 
   const onboardingSteps: OnboardingStep[] = [
     {
@@ -167,12 +199,12 @@ const OnboardingScreen = () => {
     if (currentStep.type === 'input' && currentStep.inputConfig) {
       const field = currentStep.inputConfig.field;
       const value = inputValues[field];
-      
+
       if (!value.trim()) {
         setInputError('This field is required');
         return false;
       }
-      
+
       if (field === 'email') {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(value)) {
@@ -181,7 +213,7 @@ const OnboardingScreen = () => {
         }
       }
     }
-    
+
     setInputError('');
     return true;
   };
@@ -191,35 +223,31 @@ const OnboardingScreen = () => {
       return;
     }
 
-    // Save input data if this is an input step
     if (currentStep.type === 'input' && currentStep.inputConfig) {
       const field = currentStep.inputConfig.field;
       const value = inputValues[field];
-      
+
       switch (field) {
         case 'employeeName':
-          await setEmployeeName(value);
+          await saveField('full_name', value);
           break;
         case 'email':
-          await setEmail(value);
+          await saveField('email', value);
           break;
         case 'jobTitle':
-          await setJobTitle(value);
+          await saveField('job_title', value);
           break;
         case 'department':
-          await setDepartment(value);
+          await saveField('department', value);
           break;
       }
     }
 
-    // Save language selection if this is the language step
-    // Pass true to skip reload during onboarding to prevent losing progress
     if (currentStep.type === 'language') {
       await setLanguage(selectedLanguage, true);
     }
 
     if (currentIndex < totalSteps - 1) {
-      // Smooth fade transition
       Animated.timing(fadeAnim, {
         toValue: 0.7,
         duration: 300,
@@ -227,18 +255,13 @@ const OnboardingScreen = () => {
       }).start(() => {
         const nextIndex = currentIndex + 1;
         setCurrentIndex(nextIndex);
-        
-        // Update onboarding progress
-        updateOnboardingProgress(nextIndex);
-        
-        // Update progress animation
+
         Animated.timing(progressAnim, {
           toValue: (nextIndex + 1) / totalSteps,
           duration: 400,
           useNativeDriver: false,
         }).start();
-        
-        // Reset fade animation
+
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 300,
@@ -246,7 +269,6 @@ const OnboardingScreen = () => {
         }).start();
       });
     } else {
-      // Complete onboarding with celebration animation
       Animated.sequence([
         Animated.timing(buttonScale, {
           toValue: 1.2,
@@ -259,16 +281,15 @@ const OnboardingScreen = () => {
           useNativeDriver: false,
         }),
       ]).start(async () => {
-        await completeOnboarding();
-        
-        // On web, if Arabic was selected, reload to apply RTL changes
-        // This happens after onboarding is saved so progress isn't lost
-        if (Platform.OS === 'web' && selectedLanguage === 'ar') {
-          setTimeout(() => {
-            window.location.reload();
-          }, 100);
-        } else {
-          navigation.replace('Main');
+        const ok = await markOnboardingComplete();
+        if (ok) {
+          if (Platform.OS === 'web' && selectedLanguage === 'ar') {
+            setTimeout(() => {
+              window.location.reload();
+            }, 100);
+          } else {
+            navigation.replace('Main');
+          }
         }
       });
     }
@@ -292,7 +313,6 @@ const OnboardingScreen = () => {
   const handlePrevious = () => {
     if (currentIndex > 0) {
       setInputError('');
-      // Smooth fade transition for previous
       Animated.timing(fadeAnim, {
         toValue: 0.7,
         duration: 300,
@@ -300,18 +320,13 @@ const OnboardingScreen = () => {
       }).start(() => {
         const prevIndex = currentIndex - 1;
         setCurrentIndex(prevIndex);
-        
-        // Update onboarding progress
-        updateOnboardingProgress(prevIndex);
-        
-        // Update progress animation
+
         Animated.timing(progressAnim, {
           toValue: (prevIndex + 1) / totalSteps,
           duration: 400,
           useNativeDriver: false,
         }).start();
-        
-        // Reset fade animation
+
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 300,
@@ -328,7 +343,6 @@ const OnboardingScreen = () => {
     }
   };
 
-  // Initialize progress animation
   useEffect(() => {
     progressAnim.setValue((currentIndex + 1) / totalSteps);
   }, []);
@@ -339,7 +353,7 @@ const OnboardingScreen = () => {
     }
 
     const config = currentStep.inputConfig;
-    
+
     return (
       <View style={styles.inputContainer}>
         <TextInput
@@ -404,21 +418,20 @@ const OnboardingScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <StatusBar barStyle="light-content" backgroundColor={colors.bgMain} />
-      
-      <ScrollView 
+
+      <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Progress Bar */}
         <View style={styles.progressBarContainer}>
-          <Animated.View 
+          <Animated.View
             style={[
               styles.progressBarFill,
               {
@@ -431,17 +444,14 @@ const OnboardingScreen = () => {
           />
         </View>
 
-        {/* Step Counter */}
         <View style={styles.stepCounter}>
           <Text style={styles.stepCounterText}>
             Step {currentIndex + 1} of {totalSteps}
           </Text>
         </View>
 
-        {/* Main Content */}
         <View style={styles.contentContainer}>
-          {/* Middle Illustration */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.illustrationContainer,
               {
@@ -450,15 +460,14 @@ const OnboardingScreen = () => {
             ]}
           >
             {currentStep.illustration && (
-              <Image 
-                source={currentStep.illustration} 
+              <Image
+                source={currentStep.illustration}
                 style={styles.centeredIllustration}
                 resizeMode="contain"
               />
             )}
           </Animated.View>
 
-          {/* Text Content */}
           <Animated.View style={[styles.textContent, { opacity: fadeAnim }]}>
             <Text style={styles.title}>
               {currentStep.title}
@@ -473,13 +482,10 @@ const OnboardingScreen = () => {
             )}
           </Animated.View>
 
-          {/* Input Field */}
           {renderInputField()}
 
-          {/* Language Selection */}
           {renderLanguageSelection()}
 
-          {/* Navigation Dots */}
           <View style={styles.dotsContainer}>
             {onboardingSteps.map((_, index) => (
               <Animated.View
@@ -500,7 +506,6 @@ const OnboardingScreen = () => {
             ))}
           </View>
 
-          {/* Navigation Buttons */}
           <View style={styles.buttonsContainer}>
             {currentIndex > 0 && (
               <TouchableOpacity
@@ -511,11 +516,11 @@ const OnboardingScreen = () => {
                 <Text style={styles.backButtonText}>← Back</Text>
               </TouchableOpacity>
             )}
-            
+
             <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
               <TouchableOpacity
                 style={[
-                  styles.nextButton, 
+                  styles.nextButton,
                   { backgroundColor: colors.primary },
                   currentIndex === 0 ? styles.nextButtonFull : null
                 ]}
@@ -523,9 +528,10 @@ const OnboardingScreen = () => {
                 onPressIn={handleButtonPressIn}
                 onPressOut={handleButtonPressOut}
                 activeOpacity={0.9}
+                disabled={saving}
               >
                 <Text style={styles.nextButtonText}>
-                  {currentIndex === totalSteps - 1 ? 'Get Started' : 'Continue'}
+                  {saving ? 'Saving...' : currentIndex === totalSteps - 1 ? 'Get Started' : 'Continue'}
                 </Text>
               </TouchableOpacity>
             </Animated.View>

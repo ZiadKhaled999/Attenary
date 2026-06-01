@@ -1,10 +1,3 @@
-export interface EmployeeProfile {
-  id: string;
-  name: string;
-  activeSessionId: string | null;
-  createdAt: number;
-}
-
 export interface Session {
   sessionId: string;
   checkInTime: number;
@@ -12,11 +5,49 @@ export interface Session {
   reason: string | null;
 }
 
-export interface EmployeePins {
-  [employeeName: string]: {
-    pin: string | null;
-    unlocked: boolean;
+export interface AppData {
+  sessions: Session[];
+  employeeName: string;
+  email: string;
+  jobTitle: string;
+  department: string;
+  onboardingCompleted: boolean;
+  onboardingProgress: {
+    currentStep: number;
+    completedSteps: number[];
+    lastVisited: number;
   };
+  appSettings: {
+    theme: 'light' | 'dark';
+    notifications: boolean;
+  };
+}
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string;
+  job_title: string;
+  department: string;
+  avatar_url: string;
+  onboarding_completed: boolean;
+  language: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface SyncQueueItem {
+  id?: string;
+  user_id: string;
+  entity_type: 'session' | 'profile' | 'avatar';
+  entity_id: string;
+  operation: 'upsert' | 'delete' | 'upload';
+  payload: any;
+  file_path?: string;
+  retry_count: number;
+  last_error?: string;
+  created_at?: number;
+  processed_at?: number;
 }
 
 export interface OnboardingProgress {
@@ -28,18 +59,6 @@ export interface OnboardingProgress {
 export interface AppSettings {
   theme: 'light' | 'dark';
   notifications: boolean;
-  biometricAuth: boolean;
-}
-
-export interface AppData {
-  sessions: Session[];
-  employeeName: string;
-  email: string;
-  jobTitle: string;
-  department: string;
-  onboardingCompleted: boolean;
-  onboardingProgress: OnboardingProgress;
-  appSettings: AppSettings;
 }
 
 export interface TimeStats {
@@ -56,7 +75,7 @@ export interface MonthlyStats {
     [employeeName: string]: {
       totalSeconds: number;
       sessionCount: number;
-      days: number;
+      daysWorked: number;
       avgPerDay: number;
     };
   };

@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { View, Text, StyleSheet, Alert, Platform, ScrollView } from 'react-native';
 import { Provider } from './src/context/AppContext';
+import { SupabaseProvider } from './src/context/SupabaseContext';
 import Navigation from './src/navigation/Navigation';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { LanguageProvider } from './src/context/LanguageContext';
@@ -168,14 +169,16 @@ export default function App() {
             <ContextErrorBoundary>
               <ThemeProvider>
                 <ContextErrorBoundary>
-                  <LanguageProvider>
-                    <ContextErrorBoundary>
-                      <Provider>
-                        <StatusBar style="light" backgroundColor="#0f172a" />
-                        <Navigation />
-                      </Provider>
-                    </ContextErrorBoundary>
-                  </LanguageProvider>
+              <LanguageProvider>
+                <ContextErrorBoundary>
+                  <SupabaseProvider>
+                    <Provider>
+                      <StatusBar style="light" backgroundColor="#0f172a" />
+                      <Navigation />
+                    </Provider>
+                  </SupabaseProvider>
+                </ContextErrorBoundary>
+              </LanguageProvider>
                 </ContextErrorBoundary>
               </ThemeProvider>
             </ContextErrorBoundary>
