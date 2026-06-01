@@ -11,6 +11,8 @@ export interface SupabaseContextValue {
   loading: boolean;
   isOnline: boolean;
   signUp: (email: string, password: string) => Promise<{ error: any | null }>;
+  resendOtp: (email: string) => Promise<{ error: any | null }>;
+  checkEmailRegistered: (email: string) => Promise<{ registered: boolean; error: any | null }>;
   verifyOtp: (email: string, token: string) => Promise<{ error: any | null }>;
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
@@ -112,19 +114,39 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const signUp = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signUp({ email, password });
-      if (!error) {
-        const queueSync = async () => {
-          try {
-            const currentDb = await getDb();
-            await currentDb.syncQueue.insert({ user_id: email, entity_type: 'profile', entity_id: '', operation: 'upsert', payload: { email }, file_path: '', retry_count: 0 });
-          } catch (e) { console.log('syncQueue insert error (non-critical):', e); }
-        };
-        void queueSync();
-      }
+      if (error) return { error };
+      const queueSync = async () => {
+        try {
+          const currentDb = await getDb();
+          await currentDb.syncQueue.insert({ user_id: email, entity_type: 'profile', entity_id: '', operation: 'upsert', payload: { email }, file_path: '', retry_count: 0 });
+        } catch (e) { console.log('syncQueue insert error (non-critical):', e); }
+      };
+      void queueSync();
       return { error };
     } catch (e) {
       console.log('signUp error:', e);
       return { error: e || 'Sign up failed' };
+    }
+  };
+
+  const checkEmailRegistered = async (email: string) => {
+    try {
+      const { data, error } = await supabase.from('profiles').select('id').eq('email', email).limit(1);
+      if (error) return { registered: false, error };
+      if (data && data.length > 0) return { registered: true, error: null };
+      return { registered: false, error: null };
+    } catch (e) {
+      return { registered: false, error: e };
+    }
+  };
+
+  const resendOtp = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({ email, type: 'signup' });
+      return { error };
+    } catch (e) {
+      console.log('resendOtp error:', e);
+      return { error: e || 'Resend failed' };
     }
   };
 
@@ -259,7 +281,7 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   return (
-    <SupabaseContext.Provider value={{ session, profile, loading, isOnline, signUp, verifyOtp, signIn, signOut, updateProfile, uploadAvatar, refreshProfile, fetchSessions, checkIn, checkOut, createFeedback }}>
+    <SupabaseContext.Provider value={{ session, profile, loading, isOnline, signUp, resendOtp, checkEmailRegistered, verifyOtp, signIn, signOut, updateProfile, uploadAvatar, refreshProfile, fetchSessions, checkIn, checkOut, createFeedback }}>
       {children}
     </SupabaseContext.Provider>
   );

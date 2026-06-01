@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, StatusBar, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, StatusBar, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSupabase } from '../../context/SupabaseContext';
 import { colors, spacing, borderRadius, fonts } from '../../theme/colors';
-import { supabase } from '../../config/supabase';
 
 const OTPVerifyScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { verifyOtp } = useSupabase();
+  const { verifyOtp, resendOtp } = useSupabase();
   const email = route.params?.email || '';
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resentMessage, setResentMessage] = useState('');
   const RESEND_COOLDOWN_BASE = 60;
   const RESEND_COOLDOWN_MAX = 600;
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_BASE);
@@ -51,8 +51,9 @@ const OTPVerifyScreen = () => {
   const handleResend = async () => {
     if (resendCooldown > 0) return;
     setError('');
+    setResentMessage('');
     setLoading(true);
-    const { error } = await supabase.auth.resend({ email, type: 'signup' });
+    const { error } = await resendOtp(email);
     setLoading(false);
     if (error) {
       if (isRateLimited(error)) {
@@ -65,6 +66,7 @@ const OTPVerifyScreen = () => {
     } else {
       setResendCooldown(RESEND_COOLDOWN_BASE);
       setOtp('');
+      setResentMessage('A new verification code has been sent to your email.');
     }
   };
 

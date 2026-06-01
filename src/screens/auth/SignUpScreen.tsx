@@ -6,14 +6,15 @@ import { colors, spacing, borderRadius, fonts } from '../../theme/colors';
 
 const SignUpScreen = () => {
   const navigation = useNavigation<any>();
-  const { signUp } = useSupabase();
+  const { signUp, resendOtp, checkEmailRegistered } = useSupabase();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resentMessage, setResentMessage] = useState('');
   const [signupCooldown, setSignupCooldown] = useState(0);
-  const SIGNUP_COOLDOWN = 15;
+  const SIGNUP_COOLDOWN_SECONDS = 15;
 
   const isRateLimited = (err: any) => {
     const msg = (err?.message || err?.error_description || err?.msg || '').toLowerCase();
@@ -35,21 +36,41 @@ const SignUpScreen = () => {
     return true;
   };
 
-  const handleSignUp = async () => {
+   const handleSignUp = async () => {
     if (!validate()) return;
     setLoading(true);
-    setSignupCooldown(SIGNUP_COOLDOWN);
+    setSignupCooldown(SIGNUP_COOLDOWN_SECONDS);
     setError('');
+    setResentMessage('');
     try {
-      const { error } = await signUp(email.trim().toLowerCase(), password);
-      if (error) {
-        if (isRateLimited(error)) {
-          setSignupCooldown(120);
-          setError('Too many sign-up requests. Please wait 2 minutes and try again.');
-        } else {
-          setError(error.message || 'Sign up failed. Please try again.');
-        }
+      const { registered, error: checkError } = await checkEmailRegistered(email.trim().toLowerCase());
+      if (checkError) {
+        setError('Unable to verify email. Please check your connection and try again.');
         return;
+      }
+      if (registered) {
+        const { error } = await resendOtp(email.trim().toLowerCase());
+        if (error) {
+          if (isRateLimited(error)) {
+            setSignupCooldown(120);
+            setError('Too many requests. Please wait 2 minutes and try again.');
+          } else {
+            setError(error.message || 'Failed to resend code. Please try again.');
+          }
+          return;
+        }
+        setResentMessage('This email is already registered. We have resent the verification code.');
+      } else {
+        const { error } = await signUp(email.trim().toLowerCase(), password);
+        if (error) {
+          if (isRateLimited(error)) {
+            setSignupCooldown(120);
+            setError('Too many sign-up requests. Please wait 2 minutes and try again.');
+          } else {
+            setError(error.message || 'Sign up failed. Please try again.');
+          }
+          return;
+        }
       }
       navigation.navigate('OTPVerify', { email: email.trim().toLowerCase() } as never);
     } catch (err) {
