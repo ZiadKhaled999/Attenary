@@ -17,6 +17,13 @@ const MoreScreen = () => {
 
   const navItems = [
     {
+      id: 'feedbacks',
+      title: t('more.feedbacks'),
+      subtitle: 'Send suggestions, bugs and ideas',
+      icon: <Text style={{ fontSize: 24 }}>💬</Text>,
+      screen: 'Feedbacks',
+    },
+    {
       id: 'languages',
       title: t('more.languages'),
       subtitle: t('more.languagesSubtitle'),

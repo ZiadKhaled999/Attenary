@@ -19,6 +19,7 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import BuyMeCoffeeScreen from '../screens/BuyMeCoffeeScreen';
 import SessionDetailsScreen from '../screens/SessionDetailsScreen';
 import LanguagesScreen from '../screens/LanguagesScreen';
+import FeedbacksScreen from '../screens/FeedbacksScreen';
 import AuthGateScreen from '../screens/auth/AuthGateScreen';
 import SignInScreen from '../screens/auth/SignInScreen';
 import SignUpScreen from '../screens/auth/SignUpScreen';
@@ -67,6 +68,7 @@ type MainStackParamList = {
   BuyMeCoffee: undefined;
   SessionDetails: { sessionId: string };
   Languages: undefined;
+  Feedbacks: undefined;
 };
 
 const Navigation = () => {

@@ -50,10 +50,14 @@ export interface SyncQueueItem {
   processed_at?: number;
 }
 
-export interface OnboardingProgress {
-  currentStep: number;
-  completedSteps: number[];
-  lastVisited: number;
+export interface Feedback {
+  id?: string;
+  user_id: string;
+  type: 'general' | 'bug' | 'feature';
+  email?: string;
+  content: string;
+  metadata?: Record<string, any>;
+  created_at?: number;
 }
 
 export interface AppSettings {

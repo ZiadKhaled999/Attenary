@@ -17,12 +17,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
-import { FEEDBACK_API_URL, FEEDBACK_CONFIG } from '../config/feedback';
+import { useSupabase } from '../context/SupabaseContext';
 import { useLanguage } from '../context/LanguageContext';
-
-// ═══════════════════════════════════════════════════════════════════
-// ICONS
-// ═══════════════════════════════════════════════════════════════════
 
 const SendIcon = ({ size = 20 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -46,6 +42,7 @@ const FeedbackIcon = ({ size = 48 }: { size?: number }) => (
 const FeedbacksScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { t } = useLanguage();
+  const { profile, createFeedback } = useSupabase();
   const [feedback, setFeedback] = useState('');
   const [email, setEmail] = useState('');
   const [feedbackType, setFeedbackType] = useState<'general' | 'bug' | 'feature'>('general');
@@ -53,153 +50,83 @@ const FeedbacksScreen = () => {
   const [retryAttempts, setRetryAttempts] = useState(0);
   const MAX_RETRY_ATTEMPTS = 3;
 
-  /**
-   * Map local feedback type to API expected format
-   */
-  const getApiFeedbackType = (type: string): string => {
-    const typeMap: { [key: string]: string } = {
-      'general': 'general_feedback',
-      'bug': 'bug_report',
-      'feature': 'feature_request',
-    };
-    return typeMap[type] || 'general_feedback';
-  };
-
-  /**
-   * Validate email format
-   */
   const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  /**
-   * Submit feedback to Google Sheets via Apps Script Web App
-   */
   const handleSubmit = async () => {
-    console.log('handleSubmit called');
-    
-    // Validate feedback content
     if (!feedback.trim()) {
       Alert.alert(t('common.error'), t('feedbacks.pleaseEnterFeedback'));
       return;
     }
 
-    // Validate feedback length
-    if (feedback.trim().length < FEEDBACK_CONFIG.MIN_LENGTH) {
-      Alert.alert(t('common.error'), t('feedbacks.feedbackMinLength').replace('{minLength}', FEEDBACK_CONFIG.MIN_LENGTH.toString()));
+    if (feedback.trim().length < 10) {
+      Alert.alert(t('common.error'), t('feedbacks.feedbackMinLength').replace('{minLength}', '10'));
       return;
     }
 
-    // Validate email if provided
     if (email.trim() && !isValidEmail(email.trim())) {
       Alert.alert(t('common.error'), t('feedbacks.validEmail'));
       return;
     }
 
-    // Prevent double submission
     if (isSubmitting) {
-      console.log('Already submitting, returning');
       return;
     }
 
     setIsSubmitting(true);
-    console.log('Starting submission...');
 
     try {
-      // Build payload matching the backend API format
-      const payload = {
-        feedbackType: getApiFeedbackType(feedbackType),
-        email: email.trim().toLowerCase() || 'not_provided@example.com',
+      const { error } = await createFeedback({
+        type: feedbackType,
+        email: email.trim() || profile?.email,
         content: feedback.trim(),
-        timestamp: new Date().toISOString(),
         metadata: {
           userAgent: 'Attenary Mobile App',
           referrer: 'React Native App',
           screenResolution: `${Math.round(Dimensions.get('window').width)}x${Math.round(Dimensions.get('window').height)}`,
         },
-      };
+      });
 
-      console.log('Payload:', JSON.stringify(payload, null, 2));
-      console.log('API URL:', FEEDBACK_API_URL);
-
-      // Send to Google Apps Script Web App
-      // Note: Adding proper CORS support with correct configuration
-      console.log('Sending fetch request with proper CORS headers...');
-      
-      try {
-        const response = await fetch(FEEDBACK_API_URL, {
-          method: 'POST',
-          mode: 'cors', // Changed from 'no-cors' to enable proper CORS
-          headers: {
-            'Content-Type': 'application/json', // Changed from 'text/plain' to proper JSON content type
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
-
-        console.log('Response status:', response.status);
-        console.log('Response ok:', response.ok);
-        
-        // Try to parse response
-        let responseData;
-        try {
-          responseData = await response.json();
-          console.log('Response data:', responseData);
-        } catch (parseError) {
-          console.log('Could not parse response as JSON:', parseError);
-          responseData = null;
-        }
-
-        if (!response.ok) {
-          console.log('Server returned error (non-critical):', responseData);
-          throw new Error(responseData?.error?.message || `Server error: ${response.status}`);
-        }
-
-        if (responseData?.success) {
-          console.log('Feedback submitted successfully!');
-          setRetryAttempts(0); // Reset retry counter on success
-          Alert.alert(
-            t('feedbacks.thankYou'),
-            t('feedbacks.feedbackSuccess'),
-            [
-              {
-                text: t('common.ok'),
-                onPress: () => {
-                  setFeedback('');
-                  setEmail('');
-                  setFeedbackType('general');
-                  navigation.goBack();
-                },
-              },
-            ]
-          );
-        } else {
-          throw new Error(responseData?.error?.message || t('feedbacks.unknownError'));
-        }
-      } catch (fetchError: any) {
-        console.log('Fetch error (non-critical):', fetchError?.message || fetchError);
-        throw fetchError;
+      if (error) {
+        throw error;
       }
+
+      setRetryAttempts(0);
+      Alert.alert(
+        t('feedbacks.thankYou'),
+        t('feedbacks.feedbackSuccess'),
+        [
+          {
+            text: t('common.ok'),
+            onPress: () => {
+              setFeedback('');
+              setEmail('');
+              setFeedbackType('general');
+              navigation.goBack();
+            },
+          },
+        ]
+      );
     } catch (error) {
-      console.log('Feedback submission error (non-critical):', error?.message || error);
       const canRetry = retryAttempts < MAX_RETRY_ATTEMPTS;
       const remainingAttempts = MAX_RETRY_ATTEMPTS - retryAttempts;
-      
+
       Alert.alert(
         t('feedbacks.connectionError'),
-        canRetry 
+        canRetry
           ? t('feedbacks.connectionErrorRetry').replace('{remaining}', remainingAttempts.toString())
           : t('feedbacks.maxRetryReached'),
-        canRetry 
+        canRetry
           ? [
               { text: t('feedbacks.cancel'), style: 'cancel', onPress: () => setRetryAttempts(0) },
-              { 
-                text: t('feedbacks.retry'), 
+              {
+                text: t('feedbacks.retry'),
                 onPress: () => {
                   setRetryAttempts(retryAttempts + 1);
                   handleSubmit();
-                } 
+                },
               },
             ]
           : [
@@ -220,10 +147,10 @@ const FeedbacksScreen = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bgMain} />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
@@ -233,11 +160,11 @@ const FeedbacksScreen = () => {
         <View style={styles.headerSpacer} />
       </View>
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -308,7 +235,7 @@ const FeedbacksScreen = () => {
           </View>
 
           {/* Submit Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
             onPress={handleSubmit}
             activeOpacity={0.8}
@@ -482,3 +409,4 @@ const styles = StyleSheet.create({
 });
 
 export default FeedbacksScreen;
+

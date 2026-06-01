@@ -70,6 +70,24 @@ create policy "Users view own sync queue" on public.sync_queue for select using 
 create policy "Users insert own sync queue" on public.sync_queue for insert with check (auth.uid() = user_id);
 create policy "Users update own sync queue" on public.sync_queue for update using (auth.uid() = user_id);
 
+-- Feedback entries
+create table public.feedbacks (
+  id            uuid primary key default uuid_generate_v4(),
+  user_id       uuid references public.profiles(id) on delete cascade not null,
+  type          text not null check (type in ('general','bug','feature')),
+  email         text,
+  content       text not null,
+  metadata      jsonb,
+  created_at    timestamptz default now()
+);
+
+create index idx_feedbacks_user_id on public.feedbacks(user_id);
+
+alter table public.feedbacks enable row level security;
+
+create policy "Users view own feedback" on public.feedbacks for select using (auth.uid() = user_id);
+create policy "Users insert own feedback" on public.feedbacks for insert with check (auth.uid() = user_id);
+
 -- Auto-update updated_at on profiles and sessions
 create or replace function public.handle_updated_at()
 returns trigger as $$

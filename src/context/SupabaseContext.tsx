@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { supabase } from '../config/supabase';
 import { openDb } from '../db/database';
 import NetInfo from '@react-native-community/netinfo';
-import { Profile, Session } from '../types';
+import { Profile, Session, Feedback } from '../types';
 import { Database } from '../db/database';
 
 export interface SupabaseContextValue {
@@ -20,6 +20,7 @@ export interface SupabaseContextValue {
   fetchSessions: () => Promise<Session[]>;
   checkIn: () => Promise<{ session: Session | null; error: any | null }>;
   checkOut: (sessionId: string, reason?: string) => Promise<{ error: any | null }>;
+  createFeedback: (feedback: { type: Feedback['type']; email?: string; content: string; metadata?: Record<string, any>; }) => Promise<{ error: any | null }>;
 }
 
 const SupabaseContext = createContext<SupabaseContextValue | undefined>(undefined);
@@ -221,8 +222,21 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return { error };
   };
 
+  const createFeedback = async (feedback: { type: Feedback['type']; email?: string; content: string; metadata?: Record<string, any> }) => {
+    if (!session?.user?.id) return { error: 'Not authenticated' };
+    const payload = {
+      user_id: session.user.id,
+      type: feedback.type,
+      email: feedback.email ?? null,
+      content: feedback.content,
+      metadata: feedback.metadata ?? null,
+    };
+    const { error } = await supabase.from('feedbacks').insert(payload);
+    return { error };
+  };
+
   return (
-    <SupabaseContext.Provider value={{ session, profile, loading, isOnline, signUp, verifyOtp, signIn, signOut, updateProfile, uploadAvatar, refreshProfile, fetchSessions, checkIn, checkOut }}>
+    <SupabaseContext.Provider value={{ session, profile, loading, isOnline, signUp, verifyOtp, signIn, signOut, updateProfile, uploadAvatar, refreshProfile, fetchSessions, checkIn, checkOut, createFeedback }}>
       {children}
     </SupabaseContext.Provider>
   );
