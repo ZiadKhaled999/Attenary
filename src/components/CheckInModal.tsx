@@ -5,87 +5,27 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Image,
+  Animated,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 
-// SVG Icons
-const UserIcon = ({ color = '#94a3b8', size = 24 }) => (
-  <View style={{ width: size, height: size }}>
-    <svg viewBox="0 0 24 24" fill="none">
-      <path 
-        d="M20 21v-2a8 8 0 1 0-16 0v2" 
-        stroke={color} 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="7" r="4" stroke={color} strokeWidth="2" />
-    </svg>
-  </View>
+const HeaderIcon = ({ size = 28 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/profile.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
-const CheckIcon = ({ color = '#22c55e', size = 24 }) => (
-  <View style={{ width: size, height: size }}>
-    <svg viewBox="0 0 24 24" fill="none">
-      <path 
-        d="M20 6L9 17l-5-5" 
-        stroke={color} 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeLinejoin="round"
-      />
-    </svg>
-  </View>
+const SuccessIcon = ({ size = 48 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/logs.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
 const CheckInModal = ({ navigation, route }: any) => {
   const { appData, checkIn } = useApp();
   const { t } = useLanguage();
   const [modalVisible, setModalVisible] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  useEffect(() => {
-    // If no employee name is set, redirect to Profile screen
-    if (!appData.employeeName) {
-      Alert.alert(
-        t('modal.profileRequired'),
-        t('modal.profileRequiredMessage'),
-        [
-          {
-            text: t('modal.goToProfile'),
-            onPress: () => {
-              setModalVisible(false);
-              navigation.goBack();
-              // Navigate to Profile tab
-              navigation.getParent()?.navigate('Profile');
-            }
-          }
-        ]
-      );
-      return;
-    }
-
-    // If name exists, auto check-in immediately
-    const performAutoCheckIn = async () => {
-      if (isProcessing) return;
-      setIsProcessing(true);
-      
-      try {
-        await checkIn();
-        Alert.alert(t('modal.success'), t('modal.checkedInSuccess').replace('{name}', appData.employeeName));
-        setModalVisible(false);
-        navigation.goBack();
-      } catch (error: any) {
-        Alert.alert(t('modal.error'), error.message || t('modal.checkInError'));
-        setModalVisible(false);
-        navigation.goBack();
-      }
-    };
-
-    performAutoCheckIn();
-  }, [appData.employeeName]);
+  const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
@@ -93,7 +33,6 @@ const CheckInModal = ({ navigation, route }: any) => {
       setModalVisible(false);
       navigation.dispatch(e.data.action);
     });
-
     return unsubscribe;
   }, [navigation]);
 
@@ -102,41 +41,54 @@ const CheckInModal = ({ navigation, route }: any) => {
     navigation.goBack();
   };
 
-  if (!modalVisible) {
-    return null;
-  }
+  useEffect(() => {
+    if (!appData.employeeName) {
+      setStatus('error');
+      setMessage(t('modal.profileRequired'));
+      return;
+    }
 
-  // Show loading state while processing
+    const run = async () => {
+      setStatus('processing');
+      try {
+        await checkIn();
+        setStatus('success');
+        setMessage(
+          t('modal.checkedInSuccess').replace('{name}', appData.employeeName),
+        );
+      } catch (err: any) {
+        setStatus('error');
+        setMessage(err?.message || t('modal.checkInError'));
+      }
+    };
+
+    run();
+  }, [appData.employeeName]);
+
+  if (!modalVisible) return null;
+
   return (
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <UserIcon color="#94a3b8" size={24} />
-            <Text style={styles.modalTitle}>{t('modal.checkInTitle')}</Text>
-          </View>
-
-          <View style={styles.loadingContainer}>
-            <Text style={styles.modalMessage}>
-              {appData.employeeName 
-                ? t('modal.checkingInAs').replace('{name}', appData.employeeName) 
-                : t('modal.processing')}
-            </Text>
-          </View>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
-              <Text style={styles.cancelButtonText}>{t('modal.cancel')}</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <View style={styles.iconWrap}>
+          {status === 'success' ? <SuccessIcon size={44} /> : <HeaderIcon size={28} />}
+        </View>
+        <Text style={styles.modalTitle}>{t('modal.checkInTitle')}</Text>
+        <Text style={styles.modalMessage}>{message}</Text>
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.button} onPress={closeModal} activeOpacity={0.85}>
+            <Text style={styles.buttonText}>{t('modal.close')}</Text>
+          </TouchableOpacity>
         </View>
       </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0,0,0,0.75)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,
@@ -150,48 +102,47 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: colors.bgCard,
     borderRadius: borderRadius.xl,
-    padding: spacing.lg,
+    padding: spacing.xxl,
     width: '100%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
+    maxWidth: 360,
     alignItems: 'center',
+  },
+  iconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.lg,
   },
   modalTitle: {
     fontSize: fonts.sizes.xl,
     fontWeight: fonts.weights.bold as any,
     color: colors.textPrimary,
-    marginLeft: spacing.md,
-  },
-  modalMessage: {
-    color: colors.textSecondary,
-    fontSize: fonts.sizes.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
-  loadingContainer: {
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: colors.bgGlassLight,
-    borderWidth: 1,
-    borderColor: colors.primaryGlow,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    alignItems: 'center',
-    ...shadows.neonGlowSubtle,
-  },
-  cancelButtonText: {
+  modalMessage: {
     fontSize: fonts.sizes.md,
-    fontWeight: fonts.weights.medium as any,
-    color: colors.textPrimary,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    lineHeight: 20,
+  },
+  footer: {
+    width: '100%',
+  },
+  button: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: fonts.sizes.lg,
+    color: colors.bgMain,
+    fontWeight: fonts.weights.bold as any,
   },
 });
 

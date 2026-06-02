@@ -6,40 +6,19 @@ import {
   TextInput,
   StyleSheet,
   Alert,
+  Image,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 import { formatTime, formatTimeReversed } from '../utils/timeUtils';
 
-// SVG Icons
-const WarningIcon = ({ color = '#94a3b8', size = 24 }) => (
-  <View style={{ width: size, height: size }}>
-    <svg viewBox="0 0 24 24" fill="none">
-      <path 
-        d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" 
-        stroke={color} 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeLinejoin="round"
-      />
-    </svg>
-  </View>
+const WarningIcon = ({ size = 24 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/export.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
-const DocumentIcon = ({ color = '#94a3b8', size = 24 }) => (
-  <View style={{ width: size, height: size }}>
-    <svg viewBox="0 0 24 24" fill="none">
-      <path 
-        d="M4 4h7l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" 
-        stroke={color} 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeLinejoin="round"
-      />
-      <path d="M10 9h4M10 13h4M10 17h2" stroke={color} strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  </View>
+const DocumentIcon = ({ size = 24 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/report.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
 const CheckOutModal = ({ navigation, route }: any) => {
@@ -54,7 +33,6 @@ const CheckOutModal = ({ navigation, route }: any) => {
       setModalVisible(false);
       navigation.dispatch(e.data.action);
     });
-
     return unsubscribe;
   }, [navigation]);
 
@@ -71,27 +49,22 @@ const CheckOutModal = ({ navigation, route }: any) => {
       Alert.alert(t('modal.error'), t('modal.noActiveSessionError'));
       return;
     }
-
-    checkOut(reason.trim());
+    await checkOut(reason.trim());
     Alert.alert(t('modal.success'), t('modal.checkedOutSuccess'));
     closeModal();
   };
 
-  if (!modalVisible) {
-    return null;
-  }
+  if (!modalVisible) return null;
 
   if (!activeSession) {
     return (
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <WarningIcon color="#94a3b8" size={24} />
+            <WarningIcon size={24} />
             <Text style={styles.modalTitle}>{t('modal.noActiveSession')}</Text>
           </View>
-          <Text style={styles.modalSubtitle}>
-            {t('modal.notCheckedIn')}
-          </Text>
+          <Text style={styles.modalSubtitle}>{t('modal.notCheckedIn')}</Text>
           <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
             <Text style={styles.cancelButtonText}>{t('modal.close')}</Text>
           </TouchableOpacity>
@@ -104,47 +77,40 @@ const CheckOutModal = ({ navigation, route }: any) => {
   const elapsed = Math.floor((Date.now() - activeSession.checkInTime) / 1000);
 
   return (
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <DocumentIcon color="#94a3b8" size={24} />
-            <Text style={styles.modalTitle}>{t('modal.checkOutTitle')}</Text>
-          </View>
-
-          <Text style={styles.modalSubtitle}>
-            {t('modal.checkedInSince').replace('{time}', formatTimeReversed(checkinTime))}
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <View style={styles.modalHeader}>
+          <DocumentIcon size={24} />
+          <Text style={styles.modalTitle}>{t('modal.checkOutTitle')}</Text>
+        </View>
+        <Text style={styles.modalSubtitle}>
+          {t('modal.checkedInSince').replace('{time}', formatTimeReversed(checkinTime))}
+        </Text>
+        <View style={styles.sessionInfo}>
+          <Text style={styles.sessionText}>
+            {t('modal.activeFor').replace('{duration}', formatTime(elapsed))}
           </Text>
-
-          <View style={styles.sessionInfo}>
-            <Text style={styles.sessionText}>
-              {t('modal.activeFor').replace('{duration}', formatTime(elapsed))}
-            </Text>
-          </View>
-
-          <Text style={styles.reasonLabel}>{t('modal.reasonOptional')}</Text>
-          <TextInput
-            style={styles.reasonInput}
-            placeholder={t('modal.reasonInputPlaceholder')}
-            placeholderTextColor={colors.textMuted}
-            value={reason}
-            onChangeText={setReason}
-            multiline
-            numberOfLines={3}
-          />
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
-              <Text style={styles.cancelButtonText}>{t('modal.cancel')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.confirmButton}
-              onPress={handleConfirmCheckOut}
-            >
-              <Text style={styles.confirmButtonText}>{t('modal.confirmCheckOut')}</Text>
-            </TouchableOpacity>
-          </View>
+        </View>
+        <Text style={styles.reasonLabel}>{t('modal.reasonOptional')}</Text>
+        <TextInput
+          style={styles.reasonInput}
+          placeholder={t('modal.reasonInputPlaceholder')}
+          placeholderTextColor={colors.textMuted}
+          value={reason}
+          onChangeText={setReason}
+          multiline
+          numberOfLines={3}
+        />
+        <View style={styles.modalFooter}>
+          <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
+            <Text style={styles.cancelButtonText}>{t('modal.cancel')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmCheckOut}>
+            <Text style={styles.confirmButtonText}>{t('modal.confirmCheckOut')}</Text>
+          </TouchableOpacity>
         </View>
       </View>
+    </View>
   );
 };
 

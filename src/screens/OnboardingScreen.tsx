@@ -12,6 +12,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { useApp } from '../context/AppContext';
 import { useSupabase } from '../context/SupabaseContext';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, fonts } from '../theme/colors';
@@ -28,16 +29,17 @@ interface OnboardingStep {
     placeholder: string;
     keyboardType?: 'default' | 'email-address';
     autoCapitalize?: 'none' | 'words' | 'sentences';
-    field: 'jobTitle' | 'department';
+    multiline?: boolean;
+    field: 'employeeName' | 'jobTitle' | 'department';
   };
 }
 
 const OnboardingScreen = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [fadeAnim] = useState(new Animated.Value(1));
-  const [buttonScale] = useState(new Animated.Value(1));
   const [progressAnim] = useState(new Animated.Value(0));
   const [inputValues, setInputValues] = useState({
+    employeeName: '',
     jobTitle: '',
     department: '',
   });
@@ -47,6 +49,7 @@ const OnboardingScreen = () => {
 
   const navigation: any = useNavigation();
   const { profile, updateProfile } = useSupabase();
+  const { setEmployeeName, setJobTitle, setDepartment, completeOnboarding } = useApp();
   const { setLanguage } = useLanguage();
 
   useEffect(() => {
@@ -54,36 +57,6 @@ const OnboardingScreen = () => {
       navigation.replace('Main');
     }
   }, [profile?.onboarding_completed]);
-
-  const queueSave = (field: 'job_title' | 'department', value: string) => {
-    if (!profile?.id) return;
-    const save = async () => {
-      try {
-        const { error } = await updateProfile({ [field]: value });
-        if (error) {
-          console.log('Onboarding background save failed for', field, error);
-        }
-      } catch (e) {
-        console.log('Onboarding background save error for', field, e);
-      }
-    };
-    void save();
-  };
-
-  const markOnboardingComplete = async () => {
-    if (!profile?.id) return;
-    const save = async () => {
-      try {
-        const { error } = await updateProfile({ onboarding_completed: true });
-        if (error) {
-          console.log('Onboarding completion save failed', error);
-        }
-      } catch (e) {
-        console.log('Onboarding completion save error', e);
-      }
-    };
-    void save();
-  };
 
   const onboardingSteps: OnboardingStep[] = [
     {
@@ -101,6 +74,20 @@ const OnboardingScreen = () => {
       subtitle: 'We need a few details',
       description: 'This will help us personalize your experience and set up your profile.',
       illustration: require('../../assets/on-2.png'),
+    },
+    {
+      id: 'name',
+      type: 'input',
+      title: 'What\'s Your Name?',
+      subtitle: 'Let\'s personalize your experience',
+      description: 'Enter your full name so we can address you properly.',
+      illustration: require('../../assets/name.png'),
+      inputConfig: {
+        placeholder: 'Enter your full name',
+        keyboardType: 'default',
+        autoCapitalize: 'words',
+        field: 'employeeName',
+      },
     },
     {
       id: 'job',
@@ -166,17 +153,37 @@ const OnboardingScreen = () => {
     return true;
   };
 
-  const handleNext = async () => {
-    if (!validateCurrentStep()) {
-      return;
+  const persistField = async (field: 'employeeName' | 'jobTitle' | 'department', value: string) => {
+    const normalized = value.trim();
+    switch (field) {
+      case 'employeeName':
+        await setEmployeeName(normalized);
+        void updateProfile({ full_name: normalized }).catch(() => undefined);
+        break;
+      case 'jobTitle':
+        await setJobTitle(normalized);
+        void updateProfile({ job_title: normalized }).catch(() => undefined);
+        break;
+      case 'department':
+        await setDepartment(normalized);
+        void updateProfile({ department: normalized }).catch(() => undefined);
+        break;
+      default:
+        break;
     }
+  };
+
+  const handleNext = async () => {
+    if (!validateCurrentStep()) return;
 
     if (currentStep.type === 'input' && currentStep.inputConfig) {
-      const field = currentStep.inputConfig.field;
+      const { field } = currentStep.inputConfig;
       const value = inputValues[field];
-
-      const supabaseField = field === 'jobTitle' ? 'job_title' : 'department';
-      queueSave(supabaseField, value);
+      try {
+        await persistField(field, value);
+      } catch {
+        // keep local state so user can continue
+      }
     }
 
     if (currentStep.type === 'language') {
@@ -193,20 +200,17 @@ const OnboardingScreen = () => {
           useNativeDriver: false,
         }),
         Animated.sequence([
-          Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 150,
-            useNativeDriver: false,
-          }),
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 150,
-            useNativeDriver: false,
-          }),
+          Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: false }),
+          Animated.timing(fadeAnim, { toValue: 1, duration: 150, useNativeDriver: false }),
         ]),
       ]).start();
     } else {
-      void markOnboardingComplete();
+      try {
+        await completeOnboarding();
+        void updateProfile({ onboarding_completed: true }).catch(() => undefined);
+      } catch {
+        // continue anyway
+      }
       navigation.replace('Main');
     }
   };
@@ -223,23 +227,15 @@ const OnboardingScreen = () => {
           useNativeDriver: false,
         }),
         Animated.sequence([
-          Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 150,
-            useNativeDriver: false,
-          }),
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 150,
-            useNativeDriver: false,
-          }),
+          Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: false }),
+          Animated.timing(fadeAnim, { toValue: 1, duration: 150, useNativeDriver: false }),
         ]),
       ]).start();
     }
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setInputValues(prev => ({ ...prev, [field]: value }));
+    setInputValues((prev) => ({ ...prev, [field]: value }));
     if (inputError) {
       setInputError('');
     }
@@ -250,12 +246,8 @@ const OnboardingScreen = () => {
   }, []);
 
   const renderInputField = () => {
-    if (currentStep.type !== 'input' || !currentStep.inputConfig) {
-      return null;
-    }
-
+    if (currentStep.type !== 'input' || !currentStep.inputConfig) return null;
     const config = currentStep.inputConfig;
-
     return (
       <View style={styles.inputContainer}>
         <TextInput
@@ -269,43 +261,29 @@ const OnboardingScreen = () => {
           autoCorrect={false}
           selectionColor={colors.primary}
         />
-        {inputError ? (
-          <Text style={styles.errorText}>{inputError}</Text>
-        ) : null}
+        {inputError ? <Text style={styles.errorText}>{inputError}</Text> : null}
       </View>
     );
   };
 
   const renderLanguageSelection = () => {
-    if (currentStep.type !== 'language') {
-      return null;
-    }
-
+    if (currentStep.type !== 'language') return null;
     const languages = [
       { code: 'en' as any, name: 'English', subtitle: 'Left to right (LTR)', flag: require('../../assets/icons/english.png') },
       { code: 'ar' as any, name: 'العربية', subtitle: 'Right to left (RTL)', flag: require('../../assets/icons/arabic.png') },
     ];
-
     return (
       <View style={styles.languageContainer}>
         {languages.map((lang) => (
           <TouchableOpacity
             key={lang.code}
-            style={[
-              styles.languageOption,
-              selectedLanguage === lang.code && styles.languageOptionSelected,
-            ]}
+            style={[styles.languageOption, selectedLanguage === lang.code && styles.languageOptionSelected]}
             onPress={() => setSelectedLanguage(lang.code)}
             activeOpacity={0.8}
           >
             <Image source={lang.flag} style={styles.languageFlag} resizeMode="contain" />
             <View style={styles.languageTextContainer}>
-              <Text style={[
-                styles.languageName,
-                selectedLanguage === lang.code && styles.languageNameSelected,
-              ]}>
-                {lang.name}
-              </Text>
+              <Text style={[styles.languageName, selectedLanguage === lang.code && styles.languageNameSelected]}>{lang.name}</Text>
               <Text style={styles.languageSubtitle}>{lang.subtitle}</Text>
             </View>
             {selectedLanguage === lang.code && (
@@ -320,12 +298,8 @@ const OnboardingScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bgMain} />
-
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
@@ -345,49 +319,24 @@ const OnboardingScreen = () => {
             ]}
           />
         </View>
-
         <View style={styles.stepCounter}>
           <Text style={styles.stepCounterText}>
             Step {currentIndex + 1} of {totalSteps}
           </Text>
         </View>
-
         <View style={styles.contentContainer}>
-          <Animated.View
-            style={[
-              styles.illustrationContainer,
-              {
-                opacity: fadeAnim,
-              },
-            ]}
-          >
+          <Animated.View style={[styles.illustrationContainer, { opacity: fadeAnim }]}>
             {currentStep.illustration && (
-              <Image
-                source={currentStep.illustration}
-                style={styles.centeredIllustration}
-                resizeMode="contain"
-              />
+              <Image source={currentStep.illustration} style={styles.centeredIllustration} resizeMode="contain" />
             )}
           </Animated.View>
-
           <Animated.View style={[styles.textContent, { opacity: fadeAnim }]}>
-            <Text style={styles.title}>
-              {currentStep.title}
-            </Text>
-            <Text style={styles.subtitle}>
-              {currentStep.subtitle}
-            </Text>
-            {currentStep.description && (
-              <Text style={styles.description}>
-                {currentStep.description}
-              </Text>
-            )}
+            <Text style={styles.title}>{currentStep.title}</Text>
+            <Text style={styles.subtitle}>{currentStep.subtitle}</Text>
+            {currentStep.description && <Text style={styles.description}>{currentStep.description}</Text>}
           </Animated.View>
-
           {renderInputField()}
-
           {renderLanguageSelection()}
-
           <View style={styles.dotsContainer}>
             {onboardingSteps.map((_, index) => (
               <Animated.View
@@ -395,42 +344,25 @@ const OnboardingScreen = () => {
                 style={[
                   styles.dot,
                   {
-                    backgroundColor:
-                      index === currentIndex ? colors.primary : colors.textMuted + '40',
-                    transform: [
-                      {
-                        scale: index === currentIndex ? 1.2 : 1,
-                      },
-                    ],
+                    backgroundColor: index === currentIndex ? colors.primary : colors.textMuted + '40',
+                    transform: [{ scale: index === currentIndex ? 1.2 : 1 }],
                   },
                 ]}
               />
             ))}
           </View>
-
           <View style={styles.buttonsContainer}>
             {currentIndex > 0 && (
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={handlePrevious}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity style={styles.backButton} onPress={handlePrevious} activeOpacity={0.7}>
                 <Text style={styles.backButtonText}>← Back</Text>
               </TouchableOpacity>
             )}
-
             <TouchableOpacity
-              style={[
-                styles.nextButton,
-                { backgroundColor: colors.primary },
-                currentIndex === 0 || currentIndex === totalSteps - 1 ? styles.nextButtonFull : null
-              ]}
+              style={[styles.nextButton, { backgroundColor: colors.primary }, currentIndex === totalSteps - 1 ? styles.nextButtonFull : null]}
               onPress={handleNext}
               activeOpacity={0.9}
             >
-              <Text style={styles.nextButtonText}>
-                {currentIndex === totalSteps - 1 ? 'Get Started' : 'Continue'}
-              </Text>
+              <Text style={styles.nextButtonText}>{currentIndex === totalSteps - 1 ? 'Get Started' : 'Continue'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -440,201 +372,41 @@ const OnboardingScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgMain,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingTop: 60,
-    paddingBottom: 40,
-    paddingHorizontal: spacing.xl,
-  },
-  progressBarContainer: {
-    width: '100%',
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 2,
-    marginBottom: spacing.lg,
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 2,
-  },
-  stepCounter: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  stepCounterText: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textMuted,
-    fontWeight: fonts.weights.medium as any,
-  },
-  contentContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  illustrationContainer: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  centeredIllustration: {
-    width: 220,
-    height: 220,
-  },
-  textContent: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.md,
-  },
-  title: {
-    fontSize: fonts.sizes.hero,
-    fontWeight: fonts.weights.extrabold as any,
-    color: colors.textPrimary,
-    textAlign: 'center',
-    lineHeight: 40,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: fonts.sizes.xl,
-    fontWeight: fonts.weights.semibold as any,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  description: {
-    fontSize: fonts.sizes.md,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  inputContainer: {
-    width: '100%',
-    marginBottom: spacing.xl,
-  },
-  input: {
-    width: '100%',
-    height: 56,
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.lg,
-    fontSize: fonts.sizes.lg,
-    color: colors.textPrimary,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  inputError: {
-    borderColor: '#ff4444',
-  },
-  errorText: {
-    color: '#ff4444',
-    fontSize: fonts.sizes.sm,
-    marginTop: spacing.sm,
-    marginLeft: spacing.sm,
-  },
-  dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    gap: spacing.md,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  buttonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.md,
-    width: '100%',
-  },
-  backButton: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  backButtonText: {
-    fontSize: fonts.sizes.md,
-    color: colors.textSecondary,
-    fontWeight: fonts.weights.medium as any,
-  },
-  nextButton: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 56,
-  },
-  nextButtonFull: {
-    width: '100%',
-  },
-  nextButtonText: {
-    fontSize: fonts.sizes.lg,
-    color: colors.bgMain,
-    fontWeight: fonts.weights.bold as any,
-  },
-  languageContainer: {
-    width: '100%',
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.lg,
-  },
-  languageOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  languageOptionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '15',
-  },
-  languageFlag: {
-    width: 40,
-    height: 40,
-    marginRight: spacing.md,
-  },
-  languageTextContainer: {
-    flex: 1,
-  },
-  languageName: {
-    fontSize: fonts.sizes.lg,
-    fontWeight: fonts.weights.semibold as any,
-    color: colors.textPrimary,
-  },
-  languageNameSelected: {
-    color: colors.primary,
-  },
-  languageSubtitle: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  checkmarkContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkmark: {
-    color: colors.bgMain,
-    fontSize: fonts.sizes.md,
-    fontWeight: fonts.weights.bold as any,
-  },
+  container: { flex: 1, backgroundColor: colors.bgMain },
+  scrollContent: { flexGrow: 1, paddingTop: 60, paddingBottom: 40, paddingHorizontal: spacing.xl },
+  progressBarContainer: { width: '100%', height: 4, backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 2, marginBottom: spacing.lg },
+  progressBarFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 2 },
+  stepCounter: { alignItems: 'center', marginBottom: spacing.lg },
+  stepCounterText: { fontSize: fonts.sizes.sm, color: colors.textMuted, fontWeight: fonts.weights.medium as any },
+  contentContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  illustrationContainer: { alignItems: 'center', marginBottom: spacing.xl },
+  centeredIllustration: { width: 220, height: 220 },
+  textContent: { alignItems: 'center', marginBottom: spacing.xl, paddingHorizontal: spacing.md },
+  title: { fontSize: fonts.sizes.hero, fontWeight: fonts.weights.extrabold as any, color: colors.textPrimary, textAlign: 'center', lineHeight: 40, marginBottom: spacing.sm },
+  subtitle: { fontSize: fonts.sizes.xl, fontWeight: fonts.weights.semibold as any, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.md },
+  description: { fontSize: fonts.sizes.md, color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
+  inputContainer: { width: '100%', marginBottom: spacing.xl },
+  input: { width: '100%', height: 56, backgroundColor: colors.bgCard, borderRadius: borderRadius.lg, paddingHorizontal: spacing.lg, fontSize: fonts.sizes.lg, color: colors.textPrimary, borderWidth: 2, borderColor: colors.border },
+  inputError: { borderColor: '#ff4444' },
+  errorText: { color: '#ff4444', fontSize: fonts.sizes.sm, marginTop: spacing.sm, marginLeft: spacing.sm },
+  dotsContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: spacing.xl, gap: spacing.md },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  buttonsContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.md, width: '100%' },
+  backButton: { paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.border },
+  backButtonText: { fontSize: fonts.sizes.md, color: colors.textSecondary, fontWeight: fonts.weights.medium as any },
+  nextButton: { flex: 1, paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: borderRadius.lg, alignItems: 'center', justifyContent: 'center', minHeight: 56 },
+  nextButtonFull: { width: '100%' },
+  nextButtonText: { fontSize: fonts.sizes.lg, color: colors.bgMain, fontWeight: fonts.weights.bold as any },
+  languageContainer: { width: '100%', marginBottom: spacing.xl, paddingHorizontal: spacing.lg },
+  languageOption: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: borderRadius.lg, padding: spacing.lg, marginBottom: spacing.md, borderWidth: 2, borderColor: colors.border },
+  languageOptionSelected: { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
+  languageFlag: { width: 40, height: 40, marginRight: spacing.md },
+  languageTextContainer: { flex: 1 },
+  languageName: { fontSize: fonts.sizes.lg, fontWeight: fonts.weights.semibold as any, color: colors.textPrimary },
+  languageNameSelected: { color: colors.primary },
+  languageSubtitle: { fontSize: fonts.sizes.sm, color: colors.textMuted, marginTop: 2 },
+  checkmarkContainer: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
+  checkmark: { color: colors.bgMain, fontSize: fonts.sizes.md, fontWeight: fonts.weights.bold as any },
 });
 
 export default OnboardingScreen;

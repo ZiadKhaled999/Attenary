@@ -20,7 +20,7 @@ create table public.profiles (
 
 -- Attendance sessions
 create table public.sessions (
-  id            uuid primary key default uuid_generate_v4(),
+  id            text primary key default gen_random_uuid()::text,
   user_id       uuid references public.profiles(id) on delete cascade not null,
   check_in_time timestamptz not null,
   check_out_time timestamptz,
@@ -31,10 +31,10 @@ create table public.sessions (
 
 -- Offline sync queue
 create table public.sync_queue (
-  id            uuid primary key default uuid_generate_v4(),
+  id            text primary key default gen_random_uuid()::text,
   user_id       uuid references public.profiles(id) on delete cascade not null,
   entity_type   text not null check (entity_type in ('session','profile','avatar')),
-  entity_id     uuid,
+  entity_id     text,
   operation     text not null check (operation in ('upsert','delete','upload')),
   payload       jsonb not null,
   file_path     text,
@@ -72,7 +72,7 @@ create policy "Users update own sync queue" on public.sync_queue for update usin
 
 -- Feedback entries
 create table public.feedbacks (
-  id            uuid primary key default uuid_generate_v4(),
+  id            text primary key default gen_random_uuid()::text,
   user_id       uuid references public.profiles(id) on delete cascade not null,
   type          text not null check (type in ('general','bug','feature')),
   email         text,

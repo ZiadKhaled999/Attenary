@@ -1,18 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity, Alert, StatusBar, Image } from 'react-native';
+import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity, Alert, StatusBar, Image, Platform } from 'react-native';
 import { useSupabase } from '../context/SupabaseContext';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
-import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { useLanguage } from '../context/LanguageContext';
 import * as ImagePicker from 'expo-image-picker';
+import { supabase } from '../config/supabase';
 
-const UserIcon = ({ size = 24 }: { size?: number }) => {
+const NameIcon = ({ size = 24 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/name.png')} style={{ width: size, height: size }} resizeMode="contain" />
+);
+const EmailIcon = ({ size = 24 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/email.png')} style={{ width: size, height: size }} resizeMode="contain" />
+);
+const JobIcon = ({ size = 24 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/job.png')} style={{ width: size, height: size }} resizeMode="contain" />
+);
+const DepartmentIcon = ({ size = 24 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/department.png')} style={{ width: size, height: size }} resizeMode="contain" />
+);
+
+const ProfileAvatar = ({ size = 24 }: { size?: number }) => {
   const { profile } = useSupabase();
   const avatarUrl = profile?.avatar_url;
   if (avatarUrl) {
     return <Image source={{ uri: avatarUrl }} style={{ width: size, height: size }} resizeMode="cover" />;
   }
-  return <Text style={{ fontSize: size }}>👤</Text>;
+  return <Image source={require('../../assets/icons/profile.png')} style={{ width: size, height: size }} resizeMode="contain" />;
 };
 
 const EditIcon = ({ size = 16, color = colors.textMuted }: { size?: number; color?: string }) => (
@@ -63,10 +77,10 @@ const ProfileScreen = () => {
     if (result.canceled || !result.assets?.length) return;
     const asset = result.assets[0];
     setSaving(true);
-    const { url, error } = await uploadAvatar(asset.uri);
+    const { error } = await uploadAvatar(asset.uri);
     setSaving(false);
     if (error) {
-      Alert.alert('Error', 'Failed to upload avatar. It will sync when you are back online.');
+      Alert.alert('Error', error.message || 'Failed to upload avatar.');
     }
   };
 
@@ -84,7 +98,7 @@ const ProfileScreen = () => {
             <View style={styles.avatarContainer}>
               <View style={styles.avatarGlow} />
               <View style={styles.avatar}>
-                <UserIcon size={80} />
+                <ProfileAvatar size={80} />
               </View>
               <View style={styles.editBadge}>
                 <EditIcon size={14} color={colors.textPrimary} />
@@ -106,7 +120,7 @@ const ProfileScreen = () => {
           <TouchableOpacity style={styles.profileRow} onPress={() => setNameModalVisible(true)} activeOpacity={0.7}>
             <View style={styles.profileRowLeft}>
               <View style={styles.profileIconContainer}>
-                <Text style={{ fontSize: 20 }}>👤</Text>
+                <NameIcon size={20} />
               </View>
               <View style={styles.profileInfo}>
                 <Text style={styles.profileLabel}>{t('profile.fullName')}</Text>
@@ -121,7 +135,7 @@ const ProfileScreen = () => {
           <View style={styles.profileRow}>
             <View style={styles.profileRowLeft}>
               <View style={[styles.profileIconContainer, styles.profileIconContainerSecondary]}>
-                <Text style={{ fontSize: 20 }}>✉️</Text>
+                <EmailIcon size={20} />
               </View>
               <View style={styles.profileInfo}>
                 <Text style={styles.profileLabel}>{t('profile.emailAddress')}</Text>
@@ -135,7 +149,7 @@ const ProfileScreen = () => {
           <TouchableOpacity style={styles.profileRow} onPress={() => setJobTitleModalVisible(true)} activeOpacity={0.7}>
             <View style={styles.profileRowLeft}>
               <View style={[styles.profileIconContainer, styles.profileIconContainerTertiary]}>
-                <Text style={{ fontSize: 20 }}>💼</Text>
+                <JobIcon size={20} />
               </View>
               <View style={styles.profileInfo}>
                 <Text style={styles.profileLabel}>{t('profile.jobTitle')}</Text>
@@ -150,7 +164,7 @@ const ProfileScreen = () => {
           <TouchableOpacity style={styles.profileRow} onPress={() => setDepartmentModalVisible(true)} activeOpacity={0.7}>
             <View style={styles.profileRowLeft}>
               <View style={[styles.profileIconContainer, styles.profileIconContainerQuaternary]}>
-                <Text style={{ fontSize: 20 }}>🏢</Text>
+                <DepartmentIcon size={20} />
               </View>
               <View style={styles.profileInfo}>
                 <Text style={styles.profileLabel}>{t('profile.department')}</Text>

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Alert, Platform, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 import Svg, { Path } from 'react-native-svg';
@@ -19,36 +19,36 @@ const MoreScreen = () => {
     {
       id: 'feedbacks',
       title: t('more.feedbacks'),
-      subtitle: 'Send suggestions, bugs and ideas',
-      icon: <Text style={{ fontSize: 24 }}>💬</Text>,
+      subtitle: t('more.feedbacksSubtitle'),
+      icon: <Image source={require('../../assets/icons/feedback.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />,
       screen: 'Feedbacks',
     },
     {
       id: 'languages',
       title: t('more.languages'),
       subtitle: t('more.languagesSubtitle'),
-      icon: <Text style={{ fontSize: 24 }}>🌐</Text>,
+      icon: <Image source={require('../../assets/icons/Language.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />,
       screen: 'Languages',
     },
     {
       id: 'about',
       title: t('more.about'),
       subtitle: t('more.aboutSubtitle'),
-      icon: <Text style={{ fontSize: 24 }}>ℹ️</Text>,
+      icon: <Image source={require('../../assets/icons/about.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />,
       screen: 'About',
     },
     {
       id: 'privacy',
       title: t('more.privacy'),
       subtitle: t('more.privacySubtitle'),
-      icon: <Text style={{ fontSize: 24 }}>🔒</Text>,
+      icon: <Image source={require('../../assets/icons/privacy.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />,
       screen: 'PrivacyPolicy',
     },
     {
       id: 'coffee',
       title: t('more.coffee'),
       subtitle: t('more.coffeeSubtitle'),
-      icon: <Text style={{ fontSize: 24 }}>☕</Text>,
+      icon: <Image source={require('../../assets/icons/buymeacoffee.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />,
       screen: 'BuyMeCoffee',
     },
   ];
