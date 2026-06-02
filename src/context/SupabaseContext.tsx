@@ -11,11 +11,11 @@ export interface SupabaseContextValue {
   profile: Profile | null;
   loading: boolean;
   isOnline: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: any | null }>;
-  resendOtp: (email: string) => Promise<{ error: any | null }>;
-  checkEmailRegistered: (email: string) => Promise<{ registered: boolean; error: any | null }>;
-  verifyOtp: (email: string, token: string) => Promise<{ error: any | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: any | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: { code?: string; message: string } | null }>;
+  resendOtp: (email: string) => Promise<{ error: { code?: string; message: string } | null }>;
+  checkEmailRegistered: (email: string) => Promise<{ registered: boolean; error: { code?: string; message: string } | null }>;
+  verifyOtp: (email: string, token: string) => Promise<{ error: { code?: string; message: string } | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: { code?: string; message: string } | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any | null }>;
   uploadAvatar: (fileUri: string) => Promise<{ url: string | null; error: any | null }>;
@@ -25,6 +25,31 @@ export interface SupabaseContextValue {
   checkOut: (sessionId: string, reason?: string) => Promise<{ error: any | null }>;
   createFeedback: (feedback: { type: Feedback['type']; email?: string; content: string; metadata?: Record<string, any>; }) => Promise<{ error: any | null }>;
 }
+
+interface AuthError {
+  code?: string;
+  message: string;
+}
+
+const authError = (code = 'unknown', message = 'An unknown error occurred'): AuthError => ({ code, message });
+
+export const mirrorCreateAccount = async (email: string, password: string): Promise<{ error: { code?: string; message: string } | null }> => {
+  try {
+    const supabase = createSupabaseClient(null);
+    const { error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+    if (error) {
+      const errCode = 'supabase_mirror_failed';
+      const errMessage = error.message || 'Failed to create account in Supabase Auth.';
+      return { error: authError(errCode, errMessage) };
+    }
+    return { error: null };
+  } catch (e: any) {
+    return { error: authError('supabase_mirror_failed', e?.message || 'Failed to create account in Supabase Auth.') };
+  }
+};
 
 const SupabaseContext = createContext<SupabaseContextValue | undefined>(undefined);
 
@@ -110,10 +135,21 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (result.status === 'complete') {
         return { error: null };
       }
-      return { error: new Error('Verification email sent') };
-    } catch (e) {
-      console.log('signUp error:', e);
-      return { error: e || 'Sign up failed' };
+      return { error: authError('sign_up_incomplete', 'Sign up could not be completed.') };
+    } catch (e: any) {
+      const status = e?.status;
+      const message = e?.message || '';
+      const errorCode = status || 'sign_up_failed';
+      if (message.toLowerCase().includes('disabled')) {
+        return { error: authError('sign_up_disabled', 'Sign ups are currently disabled. Please contact support or try again later.') };
+      }
+      const friendlyMessage =
+        errorCode === 'verification_required'
+          ? 'Confirm your email to activate the account.'
+          : errorCode === 'user_exists'
+          ? 'An account already exists for this email. Use Sign In.'
+          : 'Sign up failed. Please try again.';
+      return { error: authError(errorCode, friendlyMessage) };
     }
   };
 
@@ -122,20 +158,20 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const token = await getToken({ template: 'supabase' });
       const supabase = createSupabaseClient(token);
       const { data, error } = await supabase.from('profiles').select('id').eq('email', email.toLowerCase().trim()).limit(1);
-      if (error) return { registered: false, error };
+      if (error) return { registered: false, error: authError('profile_lookup_failed', error.message || 'Profile lookup failed.') };
       if (data && data.length > 0) return { registered: true, error: null };
       return { registered: false, error: null };
-    } catch (e) {
-      return { registered: false, error: e };
+    } catch (e: any) {
+      return { registered: false, error: authError('profile_lookup_failed', e?.message || 'Profile lookup failed.') };
     }
   };
 
   const resendOtp = async (email: string) => {
-    return { error: new Error('Clerk handles email verification automatically via magic link') };
+    return { error: authError('verification_unsupported', 'Clerk handles email verification automatically via magic link.') };
   };
 
   const verifyOtp = async (email: string, token: string) => {
-    return { error: new Error('Clerk handles email verification automatically via magic link') };
+    return { error: authError('verification_unsupported', 'Clerk handles email verification automatically via magic link.') };
   };
 
   const signIn = async (email: string, password: string) => {
@@ -147,10 +183,15 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (result.status === 'complete') {
         return { error: null };
       }
-      return { error: new Error('Sign in incomplete') };
-    } catch (e) {
-      console.log('signIn error:', e);
-      return { error: e || 'Sign in failed' };
+      return { error: authError('sign_in_incomplete', 'Sign in could not be completed.') };
+    } catch (e: any) {
+      const status = e?.status;
+      const errorCode = status || 'sign_in_not_found';
+      const message =
+        errorCode === 'not_found' || errorCode === 'sign_in_not_found'
+          ? "Couldn't find your account. Create an account first or verify your email if you just signed up."
+          : 'Sign in failed. Please check your credentials and try again.';
+      return { error: authError(errorCode, message) };
     }
   };
 
@@ -163,7 +204,7 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!userId) return { error: 'Not authenticated' };
+    if (!userId) return { error: authError('not_authenticated', 'Not authenticated.') };
     const profilePayload = { ...updates, id: userId, updated_at: Date.now() } as any;
     try {
       const token = await getToken({ template: 'supabase' });
@@ -176,18 +217,17 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         } catch (e) {
           console.log('syncQueue insert error (non-critical):', e);
         }
-        return { error };
+        return { error: authError('update_profile_failed', error.message || 'Profile update failed.') };
       }
       setProfile(p => (p ? { ...p, ...profilePayload } : p));
       return { error: null };
-    } catch (e) {
-      console.log('updateProfile error:', e);
-      return { error: e || 'Update failed' };
+    } catch (e: any) {
+      return { error: authError('update_profile_failed', e?.message || 'Update failed.') };
     }
   };
 
   const uploadAvatar = async (fileUri: string) => {
-    if (!userId) return { url: null, error: 'Not authenticated' };
+    if (!userId) return { url: null, error: authError('not_authenticated', 'Not authenticated.') };
     const path = `avatars/${userId}.jpg`;
     try {
       const token = await getToken({ template: 'supabase' });

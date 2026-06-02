@@ -48,17 +48,30 @@ const SignUpScreen = () => {
         password,
       });
       console.log('[SignUpScreen] signUpClerk.create result:', JSON.stringify(result, null, 2));
-      if (
+      const clerkReady =
         result.status === 'complete' ||
         result.status === 'needsVerification' ||
-        result.status === 'missing_requirements'
-      ) {
-        navigation.replace('VerifyEmail', { email: normalizedEmail } as never);
+        result.status === 'missing_requirements';
+
+      if (clerkReady) {
+        const { mirrorCreateAccount } = await import('../../context/SupabaseContext');
+        const mirrorResult = await mirrorCreateAccount(normalizedEmail, password);
+        if (mirrorResult.error) {
+          setError(mirrorResult.error.message || 'Account mirrored to Supabase Auth failed.');
+          return;
+        }
       } else {
         setError(`Sign up could not be started. Status: ${result.status}. Please try again.`);
+        return;
       }
+      navigation.replace('VerifyEmail', { email: normalizedEmail } as never);
     } catch (err: any) {
-      setError(err?.message || 'Sign up failed. Please check your network and try again.');
+      const message = err?.message || 'Sign up failed. Please check your network and try again.';
+      if (typeof message === 'string' && message.toLowerCase().includes('disabled')) {
+        setError('Sign ups are currently disabled. Please contact support or try again later.');
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
