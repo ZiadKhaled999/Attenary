@@ -20,6 +20,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, fonts } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
 import * as ImagePicker from 'expo-image-picker';
+import Svg, { Path } from 'react-native-svg';
 
 interface OnboardingStep {
   id: string;
@@ -165,20 +166,35 @@ const OnboardingScreen = () => {
   const currentStep = onboardingSteps[currentIndex];
   const totalSteps = onboardingSteps.length;
 
-  const validateCurrentStep = (): boolean => {
-    if (currentStep.type === 'input' && currentStep.inputConfig) {
-      const field = currentStep.inputConfig.field;
-      const value = inputValues[field];
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
 
-      if (!value.trim()) {
-        setInputError('This field is required');
-        return false;
-      }
+const validateCurrentStep = (): boolean => {
+  if (currentStep.type === 'input' && currentStep.inputConfig) {
+    const field = currentStep.inputConfig.field;
+    const value = inputValues[field];
+
+    if (field === 'email' && !value.trim()) {
+      setInputError('Email is required');
+      return false;
     }
 
-    setInputError('');
-    return true;
-  };
+    if (field === 'email' && value.trim() && !isValidEmail(value)) {
+      setInputError('Please enter a valid email address');
+      return false;
+    }
+
+    if (field !== 'email' && !value.trim()) {
+      setInputError('This field is required');
+      return false;
+    }
+  }
+
+  setInputError('');
+  return true;
+};
 
   const persistField = async (field: 'employeeName' | 'jobTitle' | 'department' | 'email', value: string) => {
     const normalized = value.trim();
@@ -213,11 +229,20 @@ const OnboardingScreen = () => {
 
     const asset = result.assets[0];
     setUploadingAvatar(true);
-    const { error } = await uploadAvatar(asset.uri);
-    setUploadingAvatar(false);
+    
+    const localUri = asset.uri;
+    const fileName = `avatar-${Date.now()}`;
+    
+    if (Platform.OS === 'web') {
+      await updateProfile({ avatar_url: localUri });
+      setUploadingAvatar(false);
+    } else {
+      const { error } = await uploadAvatar(localUri);
+      setUploadingAvatar(false);
 
-    if (error) {
-      Alert.alert('Error', error.message || 'Failed to upload avatar.');
+      if (error) {
+        Alert.alert('Error', error.message || 'Failed to upload avatar.');
+      }
     }
   };
 
@@ -341,32 +366,49 @@ const OnboardingScreen = () => {
     );
   };
 
-  const renderPhotoStep = () => {
-    if (currentStep.type !== 'photo') return null;
-    const avatarUrl = profile?.avatar_url;
-    return (
-      <View style={styles.photoContainer}>
-        <TouchableOpacity
-          style={styles.avatarPicker}
-          onPress={handlePickAvatar}
-          activeOpacity={0.8}
-          disabled={uploadingAvatar}
-        >
-          {uploadingAvatar ? (
-            <ActivityIndicator color={colors.primary} size="large" />
-          ) : avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarPreview} resizeMode="cover" />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Image source={require('../../assets/icons/profile.png')} style={{ width: 40, height: 40 }} resizeMode="contain" />
-            </View>
-          )}
-        </TouchableOpacity>
-        <Text style={styles.photoHint}>Tap to {avatarUrl ? 'change' : 'add'} your profile photo</Text>
-        <Text style={styles.photoOptional}>(Optional - you can skip this)</Text>
+const UploadIcon = ({ size = 24 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+  </Svg>
+);
+
+const renderPhotoStep = () => {
+  if (currentStep.type !== 'photo') return null;
+  const avatarUrl = profile?.avatar_url;
+  
+  return (
+    <View style={styles.photoContainer}>
+      <View style={styles.avatarPreviewContainer}>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={styles.avatarPreviewLarge} resizeMode="cover" />
+        ) : (
+          <View style={styles.avatarPlaceholderLarge}>
+            <Image source={require('../../assets/icons/profile.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+          </View>
+        )}
       </View>
-    );
-  };
+      
+      <TouchableOpacity
+        style={styles.uploadButton}
+        onPress={handlePickAvatar}
+        activeOpacity={0.8}
+        disabled={uploadingAvatar}
+      >
+        {uploadingAvatar ? (
+          <ActivityIndicator color={colors.bgMain} size="small" />
+        ) : (
+          <UploadIcon size={20} />
+        )}
+        <Text style={styles.uploadButtonText}>
+          {uploadingAvatar ? 'Uploading...' : (avatarUrl ? 'Change Photo' : 'Upload Photo')}
+        </Text>
+      </TouchableOpacity>
+      
+      <Text style={styles.photoHint}>Tap to upload your profile photo</Text>
+      <Text style={styles.photoOptional}>(Optional - you can skip this)</Text>
+    </View>
+  );
+};
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -480,9 +522,11 @@ const styles = StyleSheet.create({
   checkmarkContainer: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
   checkmark: { color: colors.bgMain, fontSize: fonts.sizes.md, fontWeight: fonts.weights.bold as any },
   photoContainer: { alignItems: 'center', marginBottom: spacing.xl, paddingHorizontal: spacing.lg },
-  avatarPicker: { width: 120, height: 120, borderRadius: 60, backgroundColor: colors.bgCard, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: spacing.md },
-  avatarPlaceholder: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  avatarPreview: { width: 120, height: 120, borderRadius: 60 },
+  avatarPreviewContainer: { marginBottom: spacing.lg },
+  avatarPreviewLarge: { width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: colors.primary },
+  avatarPlaceholderLarge: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.bgCard, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  uploadButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, borderRadius: borderRadius.full, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
+  uploadButtonText: { fontSize: fonts.sizes.sm, color: colors.bgMain, fontWeight: fonts.weights.medium as any, marginLeft: spacing.xs },
   photoHint: { fontSize: fonts.sizes.sm, color: colors.textMuted, textAlign: 'center', marginBottom: spacing.xs },
   photoOptional: { fontSize: fonts.sizes.xs, color: colors.textMuted, textAlign: 'center' },
 });

@@ -84,6 +84,12 @@ const ProfileScreen = () => {
     }
   };
 
+  const handleRemoveAvatar = async () => {
+    setSaving(true);
+    await updateProfile({ avatar_url: '' });
+    setSaving(false);
+  };
+
   const displayName = profile?.full_name || t('profile.tapToSetYourName') || 'Set your name';
   const displayEmail = profile?.email || t('profile.defaultEmail') || 'Email';
   const displayJobTitle = profile?.job_title || t('profile.jobTitlePlaceholder') || 'Job title';

@@ -1,8 +1,26 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../config/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Profile, Feedback } from '../types';
+import { Platform } from 'react-native';
 
 const GUEST_USER_ID = 'guest-user-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
+
+const Storage = {
+  getItem: async (key: string): Promise<string | null> => {
+    if (Platform.OS === 'web') {
+      try { return localStorage.getItem(key); } catch { return null; }
+    }
+    try { return await AsyncStorage.getItem(key); } catch { return null; }
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      try { localStorage.setItem(key, value); } catch {}
+    } else {
+      try { await AsyncStorage.setItem(key, value); } catch {}
+    }
+  },
+};
 
 export interface SupabaseContextValue {
   profile: Profile | null;
@@ -44,7 +62,7 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         let currentProfile: Profile | null = null;
         
-        const storedProfile = localStorage.getItem('attenary-profile');
+        const storedProfile = await Storage.getItem('attenary-profile');
         if (storedProfile) {
           try {
             currentProfile = JSON.parse(storedProfile) as Profile;
@@ -64,7 +82,7 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
             created_at: Date.now(),
             updated_at: Date.now(),
           };
-          localStorage.setItem('attenary-profile', JSON.stringify(currentProfile));
+          await Storage.setItem('attenary-profile', JSON.stringify(currentProfile));
         }
         
         setProfile(currentProfile);
@@ -80,7 +98,7 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const refreshProfile = useCallback(async () => {
     try {
-      const storedProfile = localStorage.getItem('attenary-profile');
+      const storedProfile = await Storage.getItem('attenary-profile');
       if (storedProfile) {
         const parsed = JSON.parse(storedProfile) as Profile;
         setProfile(parsed);
@@ -93,7 +111,7 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const updateProfile = async (updates: Partial<Profile>) => {
     try {
       const updatedProfile = { ...profile, ...updates, updated_at: Date.now() } as Profile;
-      localStorage.setItem('attenary-profile', JSON.stringify(updatedProfile));
+      await Storage.setItem('attenary-profile', JSON.stringify(updatedProfile));
       setProfile(updatedProfile);
 
       if (isOnline && supabase) {
@@ -124,16 +142,23 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const uploadAvatar = async (fileUri: string) => {
     try {
       if (!profile) return { url: null, error: 'No profile' };
-      
+
       if (!isOnline) {
         const avatarUrl = `local-avatar-${Date.now()}`;
-        await updateProfile({ avatar_url: avatarUrl });
-        return { url: avatarUrl, error: null };
+        await updateProfile({ avatar_url: fileUri || avatarUrl });
+        return { url: fileUri || avatarUrl, error: null };
       }
 
       const path = `avatars/${profile.id}.jpg`;
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
+      let blob: Blob;
+      
+      if (Platform.OS === 'web') {
+        const response = await fetch(fileUri);
+        blob = await response.blob();
+      } else {
+        const response = await fetch(fileUri);
+        blob = await response.blob();
+      }
       
       const { error } = await supabase.storage
         .from('avatars')
@@ -152,6 +177,10 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
       return { url: data.publicUrl, error: null };
     } catch (e) {
       console.log('uploadAvatar error:', e);
+      if (profile) {
+        await updateProfile({ avatar_url: fileUri });
+        return { url: fileUri, error: null };
+      }
       return { url: null, error: e };
     }
   };
