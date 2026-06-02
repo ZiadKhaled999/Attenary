@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, StatusBar, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSupabase } from '../../context/SupabaseContext';
-import { useSignIn } from '@clerk/clerk-expo';
 import { colors, spacing, borderRadius, fonts } from '../../theme/colors';
 
 const SignInScreen = () => {
   const navigation = useNavigation<any>();
   const { signIn } = useSupabase();
-  const { signIn: signInClerk, isLoaded } = useSignIn();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,17 +17,13 @@ const SignInScreen = () => {
     setLoading(true);
     setError('');
     try {
-      const result = await signInClerk.create({
-        identifier: email.trim().toLowerCase(),
-        password,
-      });
-      if (result.status === 'complete') {
-        await signIn(email.trim().toLowerCase(), password);
-      } else {
-        setError('Sign in incomplete. Please try again.');
+      const { error } = await signIn(email.trim().toLowerCase(), password);
+      if (error) {
+        setError(error.message || 'Sign in failed. Please check your credentials.');
+        return;
       }
-    } catch (err: any) {
-      setError(err?.message || 'Sign in failed. Please check your credentials.');
+    } catch {
+      setError('Sign in failed. Please check your network and try again.');
     } finally {
       setLoading(false);
     }

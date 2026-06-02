@@ -103,28 +103,52 @@ export const borderRadius = {
 };
 
 export const shadows = {
+  // Subtle glass shadow
   glass: {
-    boxShadow: '0px 4px 12px rgba(0,0,0,0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
     elevation: 8,
   },
+  // Elevated glass shadow
   glassElevated: {
-    boxShadow: '0px 8px 20px rgba(0,0,0,0.4)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
     elevation: 12,
   },
+  // Neon glow effect
   neonGlow: {
-    boxShadow: '0px 0px 15px rgba(0,255,136,0.5)',
+    shadowColor: '#00FF88',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
     elevation: 10,
   },
+  // Subtle neon glow
   neonGlowSubtle: {
-    boxShadow: '0px 0px 8px rgba(0,255,136,0.3)',
+    shadowColor: '#00FF88',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     elevation: 6,
   },
+  // Card shadow
   card: {
-    boxShadow: '0px 6px 16px rgba(0,0,0,0.35)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
     elevation: 10,
   },
+  // Button shadow
   button: {
-    boxShadow: '0px 3px 8px rgba(0,0,0,0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
     elevation: 5,
   },
 };

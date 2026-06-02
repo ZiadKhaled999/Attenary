@@ -1,27 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, StatusBar, KeyboardAvoidingView, Platform, ActivityIndicator, Linking } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, StatusBar, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSupabase } from '../../context/SupabaseContext';
-import { useSignUp } from '@clerk/clerk-expo';
 import { colors, spacing, borderRadius, fonts } from '../../theme/colors';
 
 const SignUpScreen = () => {
   const navigation = useNavigation<any>();
   const { signUp } = useSupabase();
-  const { signUp: signUpClerk, isLoaded } = useSignUp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [signupCooldown, setSignupCooldown] = useState(0);
-  const SIGNUP_COOLDOWN_SECONDS = 5;
-
-  useEffect(() => {
-    if (signupCooldown <= 0) return;
-    const t = setTimeout(() => setSignupCooldown(c => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [signupCooldown]);
 
   const validate = () => {
     if (!email.trim() || !password || !confirm) { setError('All fields are required'); return false; }
@@ -34,44 +24,18 @@ const SignUpScreen = () => {
 
   const handleSignUp = async () => {
     if (!validate()) return;
-    if (!isLoaded) {
-      setError('Auth is still loading. Please try again.');
-      return;
-    }
     setLoading(true);
-    setSignupCooldown(SIGNUP_COOLDOWN_SECONDS);
     setError('');
     try {
-      const normalizedEmail = email.trim().toLowerCase();
-      const result = await signUpClerk.create({
-        emailAddress: normalizedEmail,
-        password,
-      });
-      console.log('[SignUpScreen] signUpClerk.create result:', JSON.stringify(result, null, 2));
-      const clerkReady =
-        result.status === 'complete' ||
-        result.status === 'needsVerification' ||
-        result.status === 'missing_requirements';
-
-      if (clerkReady) {
-        const { mirrorCreateAccount } = await import('../../context/SupabaseContext');
-        const mirrorResult = await mirrorCreateAccount(normalizedEmail, password);
-        if (mirrorResult.error) {
-          setError(mirrorResult.error.message || 'Account mirrored to Supabase Auth failed.');
-          return;
-        }
-      } else {
-        setError(`Sign up could not be started. Status: ${result.status}. Please try again.`);
+      const { error } = await signUp(email.trim().toLowerCase(), password);
+      if (error) {
+        setError(error.message || 'Sign up failed. Please try again.');
         return;
       }
-      navigation.replace('VerifyEmail', { email: normalizedEmail } as never);
-    } catch (err: any) {
-      const message = err?.message || 'Sign up failed. Please check your network and try again.';
-      if (typeof message === 'string' && message.toLowerCase().includes('disabled')) {
-        setError('Sign ups are currently disabled. Please contact support or try again later.');
-      } else {
-        setError(message);
-      }
+      setLoading(false);
+      navigation.navigate('OTPVerify', { email: email.trim().toLowerCase() } as never);
+    } catch {
+      setError('Sign up failed. Please check your network and try again.');
     } finally {
       setLoading(false);
     }
@@ -102,8 +66,8 @@ const SignUpScreen = () => {
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          <TouchableOpacity style={[styles.button, styles.primaryButton, (loading || signupCooldown > 0) ? styles.buttonDisabled : null]} onPress={handleSignUp} disabled={loading || signupCooldown > 0} activeOpacity={0.85}>
-            {loading ? <ActivityIndicator color={colors.bgMain} /> : <Text style={styles.primaryButtonText}>{signupCooldown > 0 ? `Please wait ${signupCooldown}s` : 'Sign Up'}</Text>}
+          <TouchableOpacity style={[styles.button, styles.primaryButton, loading ? styles.buttonDisabled : null]} onPress={handleSignUp} disabled={loading} activeOpacity={0.85}>
+            {loading ? <ActivityIndicator color={colors.bgMain} /> : <Text style={styles.primaryButtonText}>Sign Up</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.linkButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
