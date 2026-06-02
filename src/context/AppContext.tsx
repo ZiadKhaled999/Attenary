@@ -1,8 +1,31 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../config/supabase';
-import { Session, AppData } from '../types';
+
+export interface AppData {
+  sessions: Session[];
+  employeeName: string;
+  email: string;
+  jobTitle: string;
+  department: string;
+  onboardingCompleted: boolean;
+  onboardingProgress: {
+    currentStep: number;
+    completedSteps: number[];
+    lastVisited: number;
+  };
+  appSettings: {
+    theme: 'light' | 'dark';
+    notifications: boolean;
+  };
+}
+
+export interface Session {
+  sessionId: string;
+  checkInTime: number;
+  checkOutTime: number | null;
+  reason: string | null;
+}
 
 interface AppContextType {
   appData: AppData;
@@ -60,50 +83,6 @@ export const Provider = ({ children }: AppProviderProps) => {
   const [storageError, setStorageError] = useState<string | null>(null);
   const appDataRef = useRef<AppData>(appData);
   appDataRef.current = appData;
-
-  const syncQueueRef = useRef<Promise<void> | null>(null);
-
-  const runSyncTask = useCallback(async (task: () => Promise<void>) => {
-    if (!syncQueueRef.current) {
-      syncQueueRef.current = task();
-    } else {
-      syncQueueRef.current = syncQueueRef.current.then(task, task);
-    }
-    try {
-      await syncQueueRef.current;
-    } catch (error) {
-      console.log('Sync error (non-critical):', error instanceof Error ? error.message : error);
-    } finally {
-      if (syncQueueRef.current && syncQueueRef.current !== task()) {
-        syncQueueRef.current = null;
-      }
-    }
-  }, []);
-
-  const syncToSupabase = async (options?: { email?: string }) => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) return;
-
-    const current = appDataRef.current;
-
-    const patch: any = {
-      id: userId,
-      full_name: current.employeeName,
-      email: options?.email ?? current.email,
-      job_title: current.jobTitle,
-      department: current.department,
-      onboarding_completed: current.onboardingCompleted,
-      updated_at: Date.now(),
-    };
-
-    const { error } = await supabase.from('profiles').upsert(patch, { onConflict: 'id' });
-    if (error) {
-      console.log('Profile sync error:', error);
-    }
-  };
 
   const getStorageItem = async (key: string): Promise<string | null> => {
     if (Platform.OS === 'web') {
@@ -172,52 +151,27 @@ export const Provider = ({ children }: AppProviderProps) => {
   };
 
   useEffect(() => {
-    // Only sync once on initial auth restore; per-field sync is handled in each setter.
-    let mounted = true;
-    const init = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.user && mounted) {
-        await runSyncTask(syncToSupabase);
-      }
-    };
-    init();
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, sessionState) => {
-      if (sessionState?.user) {
-        await runSyncTask(syncToSupabase);
-      }
-    });
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [runSyncTask]);
+    loadData();
+  }, []);
 
   const setEmployeeName = async (name: string) => {
     setAppData((prev: AppData) => ({ ...prev, employeeName: name }));
     await saveData();
-    void runSyncTask(syncToSupabase);
   };
 
   const setEmail = async (email: string) => {
     setAppData((prev: AppData) => ({ ...prev, email }));
     await saveData();
-    void runSyncTask(() => syncToSupabase({ email }));
   };
 
   const setJobTitle = async (jobTitle: string) => {
     setAppData((prev: AppData) => ({ ...prev, jobTitle }));
     await saveData();
-    void runSyncTask(syncToSupabase);
   };
 
   const setDepartment = async (department: string) => {
     setAppData((prev: AppData) => ({ ...prev, department }));
     await saveData();
-    void runSyncTask(syncToSupabase);
   };
 
   const checkIn = async () => {
@@ -225,11 +179,6 @@ export const Provider = ({ children }: AppProviderProps) => {
     const session: Session = { sessionId, checkInTime: Date.now(), checkOutTime: null, reason: null };
     setAppData((prev: AppData) => ({ ...prev, sessions: [...prev.sessions, session] }));
     await saveData();
-    const patch: any = { id: sessionId, user_id: (await supabase.auth.getSession()).data.session?.user?.id, check_in_time: new Date().toISOString(), updated_at: Date.now() };
-    const { error } = await supabase.from('sessions').upsert(patch, { onConflict: 'id' });
-    if (error) {
-      console.log('Session sync error:', error);
-    }
   };
 
   const checkOut = async (reason?: string) => {
@@ -242,11 +191,6 @@ export const Provider = ({ children }: AppProviderProps) => {
       ),
     }));
     await saveData();
-    const patch: any = { id: activeId, check_out_time: new Date().toISOString(), reason: reason || null, updated_at: Date.now() };
-    const { error } = await supabase.from('sessions').upsert(patch, { onConflict: 'id' });
-    if (error) {
-      console.log('Session sync error:', error);
-    }
   };
 
   const addSessions = async (newSessions: Session[]): Promise<boolean> => {
@@ -261,7 +205,6 @@ export const Provider = ({ children }: AppProviderProps) => {
   const completeOnboarding = async () => {
     setAppData((prev: AppData) => ({ ...prev, onboardingCompleted: true }));
     await saveData();
-    void runSyncTask(syncToSupabase);
   };
 
   const updateOnboardingProgress = async (step: number) => {
@@ -283,7 +226,6 @@ export const Provider = ({ children }: AppProviderProps) => {
       onboardingProgress: { currentStep: 0, completedSteps: [], lastVisited: Date.now() },
     }));
     await saveData();
-    void runSyncTask(syncToSupabase);
   };
 
   const clearStorageError = () => setStorageError(null);

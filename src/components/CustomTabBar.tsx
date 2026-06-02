@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Platform, Pressable, ScrollView } from 'react-native';
+import { View, StyleSheet, Platform, Pressable } from 'react-native';
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg';
 
 // Navbar colors - Green Dark Theme
@@ -168,11 +168,7 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, navigation }) => {
   
   return (
     <View style={styles.navbar}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.navbarScrollContent}
-      >
+      <View style={styles.navbarContainer}>
         {state.routes.map((route: any, index: number) => {
           const { name } = route;
           const tab = tabs.find(t => t.name === name);
@@ -195,15 +191,16 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, navigation }) => {
           };
 
           return (
-            <TabItem
-              key={name}
-              icon={<IconComponent color={color} filled={isFocused} />}
-              isActive={isFocused}
-              onPress={onPress}
-            />
+            <View key={name} style={[styles.tabWrapper, { flex: 1 }]}>
+              <TabItem
+                icon={<IconComponent color={color} filled={isFocused} />}
+                isActive={isFocused}
+                onPress={onPress}
+              />
+            </View>
           );
         })}
-      </ScrollView>
+      </View>
     </View>
   );
 };
@@ -215,7 +212,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderTopWidth: 1,
     borderTopColor: NAVBAR_COLORS.navbarBorder,
-    // Subtle green glow shadow matching CSS
     ...Platform.select({
       ios: {
         shadowColor: '#4ade80',
@@ -228,13 +224,16 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  navbarScrollContent: {
+  navbarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8, // Add gap between tabs for better spacing
+    justifyContent: 'space-between',
+  },
+  tabWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabItemTouchable: {
-    // Container for touch handling
   },
   tabItemPressed: {
     opacity: 0.8,
@@ -244,7 +243,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 10,
-    borderRadius: 30, // Pill shape matching CSS border-radius: 30px
+    borderRadius: 30,
   },
 });
 

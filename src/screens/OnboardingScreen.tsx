@@ -11,16 +11,19 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { useSupabase } from '../context/SupabaseContext';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, fonts } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
+import * as ImagePicker from 'expo-image-picker';
 
 interface OnboardingStep {
   id: string;
-  type: 'info' | 'input' | 'language';
+  type: 'info' | 'input' | 'language' | 'photo';
   title: string;
   subtitle: string;
   description?: string;
@@ -30,7 +33,7 @@ interface OnboardingStep {
     keyboardType?: 'default' | 'email-address';
     autoCapitalize?: 'none' | 'words' | 'sentences';
     multiline?: boolean;
-    field: 'employeeName' | 'jobTitle' | 'department';
+    field: 'employeeName' | 'jobTitle' | 'department' | 'email';
   };
 }
 
@@ -42,15 +45,17 @@ const OnboardingScreen = () => {
     employeeName: '',
     jobTitle: '',
     department: '',
+    email: '',
   });
   const [selectedLanguage, setSelectedLanguage] = useState(useLanguage().language);
   const [inputError, setInputError] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const navigation: any = useNavigation();
-  const { profile, updateProfile } = useSupabase();
+  const { profile, updateProfile, uploadAvatar, loading: supabaseLoading } = useSupabase();
   const { setEmployeeName, setJobTitle, setDepartment, completeOnboarding } = useApp();
-  const { setLanguage } = useLanguage();
+  const { setLanguage, t } = useLanguage();
 
   useEffect(() => {
     if (profile?.onboarding_completed) {
@@ -64,21 +69,35 @@ const OnboardingScreen = () => {
       type: 'info',
       title: 'Welcome to Attenary',
       subtitle: 'Your Smart Attendance System',
-      description: 'Track your work hours with precision and ease. Let\'s get you set up in just a few steps.',
+      description: "Track your work hours with precision and ease. Let's get you set up in just a few steps.",
       illustration: require('../../assets/on-1.png'),
     },
     {
       id: 'questions',
       type: 'info',
-      title: 'Let\'s answer some questions.',
+      title: "Let's answer some questions.",
       subtitle: 'We need a few details',
       description: 'This will help us personalize your experience and set up your profile.',
       illustration: require('../../assets/on-2.png'),
     },
     {
+      id: 'email',
+      type: 'input',
+      title: 'Your Email',
+      subtitle: 'For backup and sync',
+      description: 'Enter your email address to sync your data across devices.',
+      illustration: require('../../assets/icons/email.png'),
+      inputConfig: {
+        placeholder: 'e.g., john@example.com',
+        keyboardType: 'email-address',
+        autoCapitalize: 'none',
+        field: 'email',
+      },
+    },
+    {
       id: 'name',
       type: 'input',
-      title: 'What\'s Your Name?',
+      title: "What's Your Name?",
       subtitle: 'Let\'s personalize your experience',
       description: 'Enter your full name so we can address you properly.',
       illustration: require('../../assets/name.png'),
@@ -118,6 +137,14 @@ const OnboardingScreen = () => {
       },
     },
     {
+      id: 'photo',
+      type: 'photo',
+      title: 'Profile Photo',
+      subtitle: 'Optional',
+      description: 'Add a profile photo to personalize your account.',
+      illustration: require('../../assets/icons/profile.png'),
+    },
+    {
       id: 'language',
       type: 'language',
       title: 'Choose Your Language',
@@ -128,7 +155,7 @@ const OnboardingScreen = () => {
     {
       id: 'ready',
       type: 'info',
-      title: 'You\'re All Set!',
+      title: "You're All Set!",
       subtitle: 'Ready to start tracking',
       description: 'Your profile is complete. Let\'s start tracking your attendance!',
       illustration: require('../../assets/on-3.png'),
@@ -153,23 +180,44 @@ const OnboardingScreen = () => {
     return true;
   };
 
-  const persistField = async (field: 'employeeName' | 'jobTitle' | 'department', value: string) => {
+  const persistField = async (field: 'employeeName' | 'jobTitle' | 'department' | 'email', value: string) => {
     const normalized = value.trim();
     switch (field) {
       case 'employeeName':
         await setEmployeeName(normalized);
-        void updateProfile({ full_name: normalized }).catch(() => undefined);
+        await updateProfile({ full_name: normalized });
         break;
       case 'jobTitle':
         await setJobTitle(normalized);
-        void updateProfile({ job_title: normalized }).catch(() => undefined);
+        await updateProfile({ job_title: normalized });
         break;
       case 'department':
         await setDepartment(normalized);
-        void updateProfile({ department: normalized }).catch(() => undefined);
+        await updateProfile({ department: normalized });
         break;
-      default:
+      case 'email':
+        await updateProfile({ email: normalized });
         break;
+    }
+  };
+
+  const handlePickAvatar = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets?.length) return;
+
+    const asset = result.assets[0];
+    setUploadingAvatar(true);
+    const { error } = await uploadAvatar(asset.uri);
+    setUploadingAvatar(false);
+
+    if (error) {
+      Alert.alert('Error', error.message || 'Failed to upload avatar.');
     }
   };
 
@@ -181,8 +229,8 @@ const OnboardingScreen = () => {
       const value = inputValues[field];
       try {
         await persistField(field, value);
-      } catch {
-        // keep local state so user can continue
+      } catch (e) {
+        console.log('persistField error (non-critical):', e);
       }
     }
 
@@ -205,12 +253,8 @@ const OnboardingScreen = () => {
         ]),
       ]).start();
     } else {
-      try {
-        await completeOnboarding();
-        void updateProfile({ onboarding_completed: true }).catch(() => undefined);
-      } catch {
-        // continue anyway
-      }
+      await completeOnboarding();
+      await updateProfile({ onboarding_completed: true });
       navigation.replace('Main');
     }
   };
@@ -297,6 +341,33 @@ const OnboardingScreen = () => {
     );
   };
 
+  const renderPhotoStep = () => {
+    if (currentStep.type !== 'photo') return null;
+    const avatarUrl = profile?.avatar_url;
+    return (
+      <View style={styles.photoContainer}>
+        <TouchableOpacity
+          style={styles.avatarPicker}
+          onPress={handlePickAvatar}
+          activeOpacity={0.8}
+          disabled={uploadingAvatar}
+        >
+          {uploadingAvatar ? (
+            <ActivityIndicator color={colors.primary} size="large" />
+          ) : avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatarPreview} resizeMode="cover" />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Image source={require('../../assets/icons/profile.png')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+            </View>
+          )}
+        </TouchableOpacity>
+        <Text style={styles.photoHint}>Tap to {avatarUrl ? 'change' : 'add'} your profile photo</Text>
+        <Text style={styles.photoOptional}>(Optional - you can skip this)</Text>
+      </View>
+    );
+  };
+
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bgMain} />
@@ -337,6 +408,7 @@ const OnboardingScreen = () => {
           </Animated.View>
           {renderInputField()}
           {renderLanguageSelection()}
+          {renderPhotoStep()}
           <View style={styles.dotsContainer}>
             {onboardingSteps.map((_, index) => (
               <Animated.View
@@ -407,6 +479,12 @@ const styles = StyleSheet.create({
   languageSubtitle: { fontSize: fonts.sizes.sm, color: colors.textMuted, marginTop: 2 },
   checkmarkContainer: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
   checkmark: { color: colors.bgMain, fontSize: fonts.sizes.md, fontWeight: fonts.weights.bold as any },
+  photoContainer: { alignItems: 'center', marginBottom: spacing.xl, paddingHorizontal: spacing.lg },
+  avatarPicker: { width: 120, height: 120, borderRadius: 60, backgroundColor: colors.bgCard, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: spacing.md },
+  avatarPlaceholder: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  avatarPreview: { width: 120, height: 120, borderRadius: 60 },
+  photoHint: { fontSize: fonts.sizes.sm, color: colors.textMuted, textAlign: 'center', marginBottom: spacing.xs },
+  photoOptional: { fontSize: fonts.sizes.xs, color: colors.textMuted, textAlign: 'center' },
 });
 
 export default OnboardingScreen;

@@ -20,10 +20,6 @@ import BuyMeCoffeeScreen from '../screens/BuyMeCoffeeScreen';
 import SessionDetailsScreen from '../screens/SessionDetailsScreen';
 import LanguagesScreen from '../screens/LanguagesScreen';
 import FeedbacksScreen from '../screens/FeedbacksScreen';
-import AuthGateScreen from '../screens/auth/AuthGateScreen';
-import SignInScreen from '../screens/auth/SignInScreen';
-import SignUpScreen from '../screens/auth/SignUpScreen';
-import OTPVerifyScreen from '../screens/auth/OTPVerifyScreen';
 
 import CheckInModal from '../components/CheckInModal';
 import CheckOutModal from '../components/CheckOutModal';
@@ -55,10 +51,6 @@ const MainTabs = () => {
 };
 
 type MainStackParamList = {
-  AuthGate: undefined;
-  SignIn: undefined;
-  SignUp: undefined;
-  OTPVerify: { email: string };
   Onboarding: undefined;
   Main: undefined;
   CheckInModal: undefined;
@@ -72,16 +64,14 @@ type MainStackParamList = {
 };
 
 const Navigation = () => {
-  const { session, profile, loading } = useSupabase();
+  const { profile, loading } = useSupabase();
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
-  const isAuthenticated = !!session;
   const onboardingCompleted = !!profile?.onboarding_completed;
-  const initialRoute = isAuthenticated && !onboardingCompleted ? 'Onboarding' : isAuthenticated ? 'Main' : 'AuthGate';
 
   useEffect(() => {
-    if (!loading && isAuthenticated && Platform.OS !== 'web') {
+    if (!loading && !onboardingCompleted && Platform.OS !== 'web') {
       checkForUpdate()
         .then(update => {
           if (update) {
@@ -93,7 +83,9 @@ const Navigation = () => {
           console.log('Update check failed (non-critical):', error?.message || error);
         });
     }
-  }, [loading, isAuthenticated]);
+  }, [loading, onboardingCompleted]);
+
+  const initialRoute = onboardingCompleted ? 'Main' : 'Onboarding';
 
   const handleDismissUpdate = () => {
     setShowUpdateModal(false);
@@ -111,14 +103,6 @@ const Navigation = () => {
           headerShown: false,
         }}
       >
-        {!isAuthenticated && (
-          <>
-            <Stack.Screen name="AuthGate" component={AuthGateScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="SignIn" component={SignInScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="SignUp" component={SignUpScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} options={{ headerShown: false }} />
-          </>
-        )}
         <Stack.Screen
           name="Onboarding"
           component={OnboardingScreen}
@@ -154,6 +138,7 @@ const Navigation = () => {
         <Stack.Screen name="BuyMeCoffee" component={BuyMeCoffeeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="SessionDetails" component={SessionDetailsScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Languages" component={LanguagesScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Feedbacks" component={FeedbacksScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
 
       {showUpdateModal && updateInfo && (

@@ -1,27 +1,16 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../config/supabase';
-import { openDb } from '../db/database';
-import NetInfo from '@react-native-community/netinfo';
-import { Profile, Session, Feedback } from '../types';
-import { Database } from '../db/database';
+import { Profile, Feedback } from '../types';
+
+const GUEST_USER_ID = 'guest-user-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
 
 export interface SupabaseContextValue {
-  session: any | null;
   profile: Profile | null;
   loading: boolean;
   isOnline: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: any | null }>;
-  verifyOtp: (email: string, token: string) => Promise<{ error: any | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: any | null }>;
-  signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any | null }>;
   uploadAvatar: (fileUri: string) => Promise<{ url: string | null; error: any | null }>;
   refreshProfile: () => Promise<void>;
-  fetchSessions: () => Promise<Session[]>;
-  checkIn: () => Promise<{ session: Session | null; error: any | null }>;
-  checkOut: (sessionId: string, reason?: string) => Promise<{ error: any | null }>;
-  resendOtp: (email: string) => Promise<{ error: any | null }>;
-  checkEmailRegistered: (email: string) => Promise<{ registered: boolean; error: any | null }>;
   createFeedback: (feedback: { type: Feedback['type']; email?: string; content: string; metadata?: Record<string, any>; }) => Promise<{ error: any | null }>;
 }
 
@@ -36,25 +25,13 @@ export const useSupabase = () => {
 export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [session, setSession] = useState<any | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
-  const [db, setDb] = useState<Database | null>(null);
-  const dbPromiseRef = useRef<Promise<Database> | null>(null);
-
-  const getDb = useCallback(async () => {
-    if (!dbPromiseRef.current) {
-      dbPromiseRef.current = openDb().then((database) => {
-        setDb(database);
-        return database;
-      });
-    }
-    return dbPromiseRef.current;
-  }, []);
 
   const updateOnlineStatus = useCallback(async () => {
     try {
+      const NetInfo = (await import('@react-native-community/netinfo')).default;
       const state = await NetInfo.fetch();
       setIsOnline(state.isConnected ?? false);
     } catch (e) {
@@ -62,345 +39,121 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  const refreshProfile = useCallback(async () => {
-    if (!session?.user?.id) return;
-    try {
-      const res = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-      if (res.error) throw res.error;
-      const p = res.data as Profile;
-      setProfile(p);
-      getDb()
-        .then((currentDb) =>
-          currentDb.profiles.put(p).catch((e) =>
-            console.log('Local profile cache error (non-critical):', e),
-          ),
-        )
-        .catch((e) => console.log('getDb error (non-critical):', e));
-    } catch (e) {
-      console.log('refreshProfile error (non-critical):', e);
-    }
-  }, [session?.user?.id, getDb]);
-
   useEffect(() => {
-    let unsubscribeNetInfo: (() => void) | undefined;
-    const subscriptionRef = { current: null as (() => void) | null };
     const init = async () => {
       try {
-        const {
-          data: { subscription },
-        } = supabase.auth.onAuthStateChange(
-          async (_event, sessionState) => {
-            try {
-              setSession(sessionState);
-              if (sessionState?.user?.id) await refreshProfile();
-              else setProfile(null);
-            } catch (e) {
-              console.log('Auth state change error:', e);
-              setProfile(null);
-            } finally {
-              setLoading(false);
-            }
-          },
-        );
-        subscriptionRef.current = subscription.unsubscribe.bind(subscription);
-
-        const {
-          data: { session: initial },
-        } = await supabase.auth.getSession();
-        setSession(initial);
-        if (initial?.user?.id) await refreshProfile();
+        let currentProfile: Profile | null = null;
+        
+        const storedProfile = localStorage.getItem('attenary-profile');
+        if (storedProfile) {
+          try {
+            currentProfile = JSON.parse(storedProfile) as Profile;
+          } catch {}
+        }
+        
+        if (!currentProfile) {
+          currentProfile = {
+            id: GUEST_USER_ID,
+            email: '',
+            full_name: '',
+            job_title: '',
+            department: '',
+            avatar_url: '',
+            onboarding_completed: false,
+            language: 'en',
+            created_at: Date.now(),
+            updated_at: Date.now(),
+          };
+          localStorage.setItem('attenary-profile', JSON.stringify(currentProfile));
+        }
+        
+        setProfile(currentProfile);
         setLoading(false);
-
         await updateOnlineStatus();
-        unsubscribeNetInfo = NetInfo.addEventListener((state) =>
-          setIsOnline(state.isConnected ?? false),
-        );
       } catch (e) {
-        console.log('Supabase init error (non-critical):', e);
+        console.log('Init error (non-critical):', e);
         setLoading(false);
       }
     };
     init();
-    return () => {
-      if (subscriptionRef.current) subscriptionRef.current();
-      if (unsubscribeNetInfo) unsubscribeNetInfo();
-    };
-  }, [refreshProfile, updateOnlineStatus, getDb]);
+  }, [updateOnlineStatus]);
 
-  const signUp = async (email: string, password: string) => {
+  const refreshProfile = useCallback(async () => {
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (!error) {
-        const queueSync = async () => {
-          try {
-            const currentDb = await getDb();
-            await currentDb.syncQueue.insert({
-              user_id: email,
-              entity_type: 'profile',
-              entity_id: '',
-              operation: 'upsert',
-              payload: { email },
-              file_path: '',
-              retry_count: 0,
-            });
-          } catch (e) {
-            console.log('syncQueue insert error (non-critical):', e);
-          }
-        };
-        void queueSync();
+      const storedProfile = localStorage.getItem('attenary-profile');
+      if (storedProfile) {
+        const parsed = JSON.parse(storedProfile) as Profile;
+        setProfile(parsed);
       }
-      return { error };
     } catch (e) {
-      console.log('signUp error:', e);
-      return { error: e || 'Sign up failed' };
+      console.log('refreshProfile error (non-critical):', e);
     }
-  };
-
-  const verifyOtp = async (email: string, token: string) => {
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'signup',
-      });
-      return { error };
-    } catch (e) {
-      console.log('verifyOtp error:', e);
-      return { error: e || 'Verification failed' };
-    }
-  };
-
-  const resendOtp = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resend({
-        email,
-        type: 'signup',
-      });
-      return { error };
-    } catch (e) {
-      console.log('resendOtp error:', e);
-      return { error: e || 'Resend failed' };
-    }
-  };
-
-  const checkEmailRegistered = async (email: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .limit(1);
-      if (error) {
-        return { registered: false, error };
-      }
-      return { registered: !!data?.length, error: null };
-    } catch (e) {
-      return { registered: false, error: e };
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      return { error };
-    } catch (e) {
-      console.log('signIn error:', e);
-      return { error: e || 'Sign in failed' };
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch {}
-    setSession(null);
-    setProfile(null);
-  };
+  }, []);
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!session?.user?.id) return { error: 'Not authenticated' };
-    const profilePayload = {
-      ...updates,
-      id: session.user.id,
-      updated_at: Date.now(),
-    } as any;
-    const { error } = await supabase
-      .from('profiles')
-      .update(profilePayload)
-      .eq('id', session.user.id);
-    if (error) {
-      try {
-        const currentDb = await getDb();
-        await currentDb.syncQueue.insert({
-          user_id: session.user.id,
-          entity_type: 'profile',
-          entity_id: session.user.id,
-          operation: 'upsert',
-          payload: profilePayload,
-          file_path: '',
-          retry_count: 0,
-        });
-      } catch (e) {
-        console.log('syncQueue insert error (non-critical):', e);
+    try {
+      const updatedProfile = { ...profile, ...updates, updated_at: Date.now() } as Profile;
+      localStorage.setItem('attenary-profile', JSON.stringify(updatedProfile));
+      setProfile(updatedProfile);
+
+      if (isOnline && supabase) {
+        const profilePayload = {
+          ...updates,
+          id: updatedProfile.id,
+          updated_at: updatedProfile.updated_at,
+          onboarding_completed: updatedProfile.onboarding_completed,
+          full_name: updatedProfile.full_name,
+          email: updatedProfile.email,
+          job_title: updatedProfile.job_title,
+          department: updatedProfile.department,
+        };
+        const { error } = await supabase
+          .from('profiles')
+          .upsert(profilePayload, { onConflict: 'id' });
+        if (error) {
+          console.log('Supabase profile sync error (non-critical):', error);
+        }
       }
-      return { error };
+      return { error: null };
+    } catch (e) {
+      console.log('updateProfile error:', e);
+      return { error: e || 'Update failed' };
     }
-    setProfile((p) => (p ? { ...p, ...profilePayload } : p));
-    return { error: null };
   };
 
   const uploadAvatar = async (fileUri: string) => {
-    if (!session?.user?.id) {
-      return { url: null, error: 'Not authenticated' };
-    }
-    const path = `avatars/${session.user.id}.jpg`;
-    const { error } = await supabase.storage
-      .from('avatars')
-      .upload(
-        path,
-        {
-          uri: fileUri,
-          type: 'image/jpeg',
-        } as any,
-        {
+    try {
+      if (!profile) return { url: null, error: 'No profile' };
+      
+      if (!isOnline) {
+        const avatarUrl = `local-avatar-${Date.now()}`;
+        await updateProfile({ avatar_url: avatarUrl });
+        return { url: avatarUrl, error: null };
+      }
+
+      const path = `avatars/${profile.id}.jpg`;
+      const response = await fetch(fileUri);
+      const blob = await response.blob();
+      
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(path, blob, {
           cacheControl: '3600',
           upsert: true,
-          contentType: 'image/jpeg',
-        },
-      );
-    if (error) {
-      try {
-        const currentDb = await getDb();
-        await currentDb.syncQueue.insert({
-          user_id: session.user.id,
-          entity_type: 'avatar',
-          entity_id: session.user.id,
-          operation: 'upload',
-          payload: { path },
-          file_path: fileUri,
-          retry_count: 0,
         });
-      } catch (e) {
-        console.log('syncQueue insert error (non-critical):', e);
+      
+      if (error) {
+        console.log('Avatar upload error (non-critical):', error);
+        return { url: null, error };
       }
-      return { url: null, error };
-    }
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-    await updateProfile({ avatar_url: data.publicUrl });
-    return { url: data.publicUrl, error: null };
-  };
-
-  const fetchSessions = async () => {
-    if (!session?.user?.id) return [];
-    const { data, error } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('check_in_time', { ascending: false });
-    if (error) return [];
-    return (data as any[]).map((s: any) => ({
-      sessionId: s.id,
-      checkInTime: new Date(s.check_in_time).getTime(),
-      checkOutTime: s.check_out_time
-        ? new Date(s.check_out_time).getTime()
-        : null,
-      reason: s.reason,
-    })) as Session[];
-  };
-
-  const checkIn = async () => {
-    if (!session?.user?.id) {
-      return { session: null, error: 'Not authenticated' };
-    }
-    const { data, error } = await supabase
-      .from('sessions')
-      .insert({
-        user_id: session.user.id,
-        check_in_time: new Date().toISOString(),
-      })
-      .select()
-      .single();
-    if (error) {
-      try {
-        const currentDb = await getDb();
-        await currentDb.syncQueue.insert({
-          user_id: session.user.id,
-          entity_type: 'session',
-          entity_id: '',
-          operation: 'upsert',
-          payload: {
-            user_id: session.user.id,
-            check_in_time: new Date().toISOString(),
-          },
-          file_path: '',
-          retry_count: 0,
-        });
-      } catch (e) {
-        console.log('syncQueue insert error (non-critical):', e);
-      }
-      return { session: null, error };
-    }
-    if (!data) return { session: null, error: 'No data returned' };
-    const newSession: Session = {
-      sessionId: data.id,
-      checkInTime: new Date(data.check_in_time).getTime(),
-      checkOutTime: null,
-      reason: null,
-    };
-    try {
-      const currentDb = await getDb();
-      await currentDb.sessions.put({
-        ...newSession,
-        checkInTime: newSession.checkInTime,
-        checkOutTime: null,
-        reason: null,
-      });
+      
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      await updateProfile({ avatar_url: data.publicUrl });
+      return { url: data.publicUrl, error: null };
     } catch (e) {
-      console.log('Local session cache error (non-critical):', e);
+      console.log('uploadAvatar error:', e);
+      return { url: null, error: e };
     }
-    return { session: newSession, error: null };
-  };
-
-  const checkOut = async (sessionId: string, reason?: string) => {
-    if (!session?.user?.id) {
-      return { error: 'Not authenticated' };
-    }
-    const { error } = await supabase
-      .from('sessions')
-      .update({
-        check_out_time: new Date().toISOString(),
-        reason: reason ?? null,
-      })
-      .eq('id', sessionId)
-      .eq('user_id', session.user.id);
-    if (error) {
-      try {
-        const currentDb = await getDb();
-        await currentDb.syncQueue.insert({
-          user_id: session.user.id,
-          entity_type: 'session',
-          entity_id: sessionId,
-          operation: 'upsert',
-          payload: {
-            check_out_time: new Date().toISOString(),
-            reason,
-          },
-          file_path: '',
-          retry_count: 0,
-        });
-      } catch (e) {
-        console.log('syncQueue insert error (non-critical):', e);
-      }
-      return { error };
-    }
-    return { error: null };
   };
 
   const createFeedback = async (
@@ -411,37 +164,31 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
       metadata?: Record<string, any>;
     },
   ) => {
-    if (!session?.user?.id) return { error: 'Not authenticated' };
-    const payload = {
-      user_id: session.user.id,
-      type: feedback.type,
-      email: feedback.email ?? null,
-      content: feedback.content,
-      metadata: feedback.metadata ?? null,
-    };
-    const { error } = await supabase.from('feedbacks').insert(payload);
-    return { error };
+    try {
+      const payload = {
+        user_id: profile?.id || GUEST_USER_ID,
+        type: feedback.type,
+        email: feedback.email ?? null,
+        content: feedback.content,
+        metadata: feedback.metadata ?? null,
+      };
+      const { error } = await supabase.from('feedbacks').insert(payload);
+      return { error };
+    } catch (e) {
+      console.log('createFeedback error:', e);
+      return { error: e };
+    }
   };
 
   return (
     <SupabaseContext.Provider
       value={{
-        session,
         profile,
         loading,
         isOnline,
-        signUp,
-        resendOtp,
-        checkEmailRegistered,
-        verifyOtp,
-        signIn,
-        signOut,
         updateProfile,
         uploadAvatar,
         refreshProfile,
-        fetchSessions,
-        checkIn,
-        checkOut,
         createFeedback,
       }}
     >
