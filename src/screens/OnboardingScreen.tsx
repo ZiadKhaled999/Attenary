@@ -54,9 +54,11 @@ const OnboardingScreen = () => {
   const scrollViewRef = useRef<ScrollView>(null);
 
   const navigation: any = useNavigation();
-  const { profile, updateProfile, uploadAvatar, loading: supabaseLoading } = useSupabase();
-  const { setEmployeeName, setJobTitle, setDepartment, completeOnboarding } = useApp();
+  const { profile, updateProfile, uploadAvatar, loading: supabaseLoading, completeOnboarding } = useSupabase();
+  const { setEmployeeName, setJobTitle, setDepartment } = useApp();
   const { setLanguage, t } = useLanguage();
+
+  const generateGuestId = () => 'guest-user-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
 
   useEffect(() => {
     if (profile?.onboarding_completed) {
@@ -175,20 +177,27 @@ const validateCurrentStep = (): boolean => {
     const field = currentStep.inputConfig.field;
     const value = inputValues[field];
 
-    if (field === 'email' && !value.trim()) {
-      setInputError('Email is required');
-      return false;
-    }
-
-    if (field === 'email' && value.trim() && !isValidEmail(value)) {
-      setInputError('Please enter a valid email address');
-      return false;
+    if (field === 'email') {
+      if (!value.trim()) {
+        setInputError('Email is required');
+        return false;
+      }
+      if (!isValidEmail(value)) {
+        setInputError('Please enter a valid email address');
+        return false;
+      }
     }
 
     if (field !== 'email' && !value.trim()) {
       setInputError('This field is required');
       return false;
     }
+  }
+
+  // Avatar is required - check when on photo step
+  if (currentStep.type === 'photo' && !profile?.avatar_url) {
+    setInputError('Profile photo is required');
+    return false;
   }
 
   setInputError('');
@@ -269,9 +278,29 @@ const validateCurrentStep = (): boolean => {
         ]),
       ]).start();
     } else {
-      await completeOnboarding();
-      await updateProfile({ onboarding_completed: true });
-      navigation.replace('Main');
+      // Final step - complete onboarding with all collected data
+      // Avatar is required - get from profile state
+      const avatarUrl = profile?.avatar_url;
+      if (!avatarUrl) {
+        Alert.alert('Error', 'Profile photo is required. Please go back and upload a photo.');
+        return;
+      }
+
+      const result = await completeOnboarding({
+        id: profile?.id || generateGuestId(),
+        email: inputValues.email,
+        full_name: inputValues.employeeName,
+        job_title: inputValues.jobTitle,
+        department: inputValues.department,
+        avatar_url: avatarUrl,
+        language: selectedLanguage,
+      });
+
+      if (result.success) {
+        navigation.replace('Main');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to save profile');
+      }
     }
   };
 
@@ -395,9 +424,12 @@ const renderPhotoStep = () => {
         </Text>
       </TouchableOpacity>
       
-      <Text style={styles.photoHint}>Tap to upload your profile photo</Text>
-      <Text style={styles.photoOptional}>(Optional - you can skip this)</Text>
-    </View>
+      {inputError && !avatarUrl && (
+        <Text style={styles.errorText}>{inputError}</Text>
+      )}
+      
+      <Text style={styles.photoHint}>Profile photo is required</Text>
+      </View>
   );
 };
 

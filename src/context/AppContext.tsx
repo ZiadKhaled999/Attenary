@@ -28,23 +28,23 @@ export interface Session {
 }
 
 interface AppContextType {
-  appData: AppData;
-  loading: boolean;
-  saveData: () => Promise<boolean>;
-  loadData: () => Promise<void>;
-  checkIn: () => Promise<void>;
-  checkOut: (reason?: string) => Promise<void>;
-  setEmployeeName: (name: string) => Promise<void>;
-  setEmail: (email: string) => Promise<void>;
-  setJobTitle: (jobTitle: string) => Promise<void>;
-  setDepartment: (department: string) => Promise<void>;
-  addSessions: (sessions: Session[]) => Promise<boolean>;
-  completeOnboarding: () => Promise<void>;
-  updateOnboardingProgress: (step: number) => Promise<void>;
-  resetOnboardingProgress: () => Promise<void>;
-  storageError: string | null;
-  clearStorageError: () => void;
-  deleteSession: (sessionId: string) => Promise<boolean>;
+   appData: AppData;
+   loading: boolean;
+   saveData: () => Promise<boolean>;
+   loadData: () => Promise<void>;
+   checkIn: () => Promise<void>;
+   checkOut: (reason?: string) => Promise<void>;
+   setEmployeeName: (name: string) => Promise<void>;
+   setEmail: (email: string) => Promise<void>;
+   setJobTitle: (jobTitle: string) => Promise<void>;
+   setDepartment: (department: string) => Promise<void>;
+   addSessions: (sessions: Session[]) => Promise<boolean>;
+   completeOnboarding: () => Promise<void>;
+   updateOnboardingProgress: (step: number) => Promise<void>;
+   resetOnboardingProgress: () => Promise<void>;
+   storageError: string | null;
+   clearStorageError: () => void;
+   deleteSession: (sessionId: string) => Promise<boolean>;
 }
 
 const STORAGE_KEY = 'PHARMACY_ATTENDANCE_DATA_V2';
@@ -62,23 +62,23 @@ interface AppProviderProps {
 }
 
 export const Provider = ({ children }: AppProviderProps) => {
-  const [appData, setAppData] = useState<AppData>({
-    sessions: [],
-    employeeName: '',
-    email: '',
-    jobTitle: '',
-    department: '',
-    onboardingCompleted: false,
-    onboardingProgress: {
-      currentStep: 0,
-      completedSteps: [],
-      lastVisited: Date.now(),
-    },
-    appSettings: {
-      theme: 'dark',
-      notifications: true,
-    },
-  });
+const [appData, setAppData] = useState<AppData>({
+      sessions: [],
+      employeeName: '',
+      email: '',
+      jobTitle: '',
+      department: '',
+      onboardingCompleted: false,
+      onboardingProgress: {
+        currentStep: 0,
+        completedSteps: [],
+        lastVisited: Date.now(),
+      },
+      appSettings: {
+        theme: 'dark',
+        notifications: true,
+      },
+    });
   const [loading, setLoading] = useState(true);
   const [storageError, setStorageError] = useState<string | null>(null);
   const appDataRef = useRef<AppData>(appData);

@@ -30,6 +30,15 @@ export interface SupabaseContextValue {
   uploadAvatar: (fileUri: string) => Promise<{ url: string | null; error: any | null }>;
   refreshProfile: () => Promise<void>;
   createFeedback: (feedback: { type: Feedback['type']; email?: string; content: string; metadata?: Record<string, any>; }) => Promise<{ error: any | null }>;
+  completeOnboarding: (data: {
+    id: string;
+    email: string;
+    full_name: string;
+    job_title: string;
+    department: string;
+    avatar_url: string;
+    language: string;
+  }) => Promise<{ success: boolean; error?: string }>;
 }
 
 const SupabaseContext = createContext<SupabaseContextValue | undefined>(undefined);
@@ -215,6 +224,88 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // Complete onboarding - atomic sync to Supabase after all data collected
+  const completeOnboarding = useCallback(async (data: {
+    id: string;
+    email: string;
+    full_name: string;
+    job_title: string;
+    department: string;
+    avatar_url: string;
+    language: string;
+  }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      // Store locally first for offline support
+      const localProfile: Profile = {
+        id: data.id,
+        email: data.email,
+        full_name: data.full_name,
+        job_title: data.job_title,
+        department: data.department,
+        avatar_url: data.avatar_url,
+        onboarding_completed: true,
+        language: data.language,
+        created_at: Date.now(),
+        updated_at: Date.now(),
+      };
+      
+      await Storage.setItem('attenary-profile', JSON.stringify(localProfile));
+      setProfile(localProfile);
+
+      if (isOnline && supabase) {
+        // For web compatibility - upload avatar to storage if provided
+        let finalAvatarUrl = data.avatar_url;
+        if (data.avatar_url && (Platform.OS === 'web' || data.avatar_url.startsWith('file://') === false)) {
+          try {
+            if (Platform.OS === 'web' && data.avatar_url.startsWith('http')) {
+              const path = `avatars/${data.id}-${Date.now()}.jpg`;
+              const response = await fetch(data.avatar_url);
+              const blob = await response.blob();
+              
+              const { error: uploadError } = await supabase.storage
+                .from('profile-photos')
+                .upload(path, blob, { upsert: true });
+              
+              if (!uploadError) {
+                const { data: urlData } = supabase.storage.from('profile-photos').getPublicUrl(path);
+                finalAvatarUrl = urlData?.publicUrl;
+              }
+            }
+          } catch (uploadErr) {
+            console.log('Avatar upload during onboarding failed (non-critical):', uploadErr);
+          }
+        }
+
+        // Sync to Supabase - required for online mode
+        const { error } = await supabase.from('profiles').upsert({
+          id: data.id,
+          email: data.email,
+          full_name: data.full_name,
+          job_title: data.job_title,
+          department: data.department,
+          avatar_url: finalAvatarUrl,
+          onboarding_completed: true,
+          language: data.language,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+        if (error) {
+          console.error('Onboarding sync failed:', error);
+          // For online mode, sync failure = failure
+          return { success: false, error: error.message || 'Failed to sync profile to server' };
+        }
+      } else {
+        // Offline mode - still save locally but indicate sync pending
+        console.log('completeOnboarding: Offline - saved locally, sync pending');
+      }
+
+      return { success: true };
+    } catch (e: any) {
+      console.error('completeOnboarding error:', e);
+      return { success: false, error: e.message || 'Failed to complete onboarding' };
+    }
+  }, [profile, isOnline]);
+
   return (
     <SupabaseContext.Provider
       value={{
@@ -225,6 +316,7 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
         uploadAvatar,
         refreshProfile,
         createFeedback,
+        completeOnboarding,
       }}
     >
       {children}

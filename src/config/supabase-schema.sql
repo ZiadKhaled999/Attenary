@@ -114,4 +114,8 @@ end;
 $$ language plpgsql security definer;
 
 create trigger on_auth_user_created after insert on auth.users
-  for each row execute function public.handle_new_user();
+   for each row execute function public.handle_new_user();
+
+-- Storage bucket for profile photos
+-- Note: Run this separately in Supabase Dashboard if needed
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('profile-photos', 'profile-photos', true);
