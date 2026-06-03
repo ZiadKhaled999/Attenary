@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Restore Backup — Obsidian Modern</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #121212; /* Deep premium midnight black */
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .glass-card {
+            background: linear-gradient(180deg, rgba(30, 30, 30, 0.7) 0%, rgba(22, 22, 22, 0.7) 100%);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glow-effect {
+            box-shadow: 0 0 40px -5px rgba(168, 130, 255, 0.25);
+        }
+
+        .glow-active {
+            box-shadow: 0 0 50px -2px rgba(168, 130, 255, 0.4);
+        }
+
+        @keyframes shimmer {
+            100% { transform: translateX(100%); }
+        }
+        .shimmer-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            transform: translateX(-100%);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+            animation: shimmer 2.5s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen w-full flex justify-center items-center p-4 sm:p-6 overflow-x-hidden text-[#e3e3e3]">
+
+    <!-- Hidden Native File Input -->
+    <input type="file" id="nativeFilePicker" accept=".json,.sqlite" class="hidden" onchange="handleFileSelection(event)">
+
+    <!-- Decorative background ambiance -->
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-72 bg-[#a882ff]/5 blur-[120px] pointer-events-none rounded-full"></div>
+
+    <!-- Core App Container Frame -->
+    <div class="w-full max-w-md flex flex-col relative z-10">
+        
+        <!-- Header Matrix -->
+        <div class="flex items-center justify-between w-full mb-8">
+            <button onclick="window.history.back()" class="w-10 h-10 rounded-xl bg-[#1e1e1e] border border-white/[0.04] flex items-center justify-center text-[#999999] hover:text-[#a882ff] active:scale-95 transition-all cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                </svg>
+            </button>
+            <div class="flex flex-col items-center">
+                <span class="text-[11px] font-bold uppercase tracking-[0.15em] text-[#666666]">Recovery Console</span>
+            </div>
+            <div class="w-10 invisible"></div>
+        </div>
+
+        <!-- Hero Status Visual Module -->
+        <div class="flex flex-col items-center text-center mb-8">
+            <div class="mb-5 relative flex items-center justify-center">
+                <div class="w-24 h-24 rounded-full border border-white/[0.03] absolute"></div>
+                <!-- Core Glowing Icon Surface -->
+                <div id="heroIconContainer" class="w-18 h-18 rounded-2xl bg-gradient-to-b from-[#1e1e1e] to-[#161616] border border-[#a882ff]/30 flex items-center justify-center text-[#a882ff] glow-effect relative z-10 transition-all duration-500">
+                    <svg id="heroIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-7 h-7 transition-transform duration-300">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.746 3.746 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.746 3.746 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+                    </svg>
+                </div>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight text-white">Restore Backup</h1>
+            <p class="text-[13px] text-[#888888] font-medium mt-1">Import database state directly into your local sandbox</p>
+        </div>
+
+        <!-- Modern Metric Cards Grid System -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            <!-- Metric 1 -->
+            <div id="statusCard" class="glass-card rounded-2xl p-4 flex flex-col gap-1.5 relative overflow-hidden">
+                <span class="text-[11px] font-bold text-[#666666] uppercase tracking-wider">File Status</span>
+                <span id="detectedBackups" class="text-[15px] font-bold text-[#b5b5b5] tracking-tight mt-1 transition-all">No File</span>
+            </div>
+            <!-- Metric 2 -->
+            <div class="glass-card rounded-2xl p-4 flex flex-col gap-1.5 relative overflow-hidden">
+                <span class="text-[11px] font-bold text-[#666666] uppercase tracking-wider">Target Archive</span>
+                <span id="fileSizeDisplay" class="text-[15px] font-bold text-[#666666] mt-1">0.00 KB</span>
+            </div>
+        </div>
+
+        <!-- Main Structural Settings Group Box -->
+        <div class="glass-card rounded-3xl p-2.5 flex flex-col gap-1 mb-6">
+            
+            <!-- Dynamic State Info Row: Tracks what is currently ready to be deployed -->
+            <div id="fileRowContainer" class="flex items-center justify-between p-3.5 rounded-2xl bg-transparent transition-all">
+                <div class="flex items-center gap-3.5">
+                    <div id="fileIconWrapper" class="w-9 h-9 rounded-xl bg-white/[0.03] flex items-center justify-center text-[#888888] transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44z" />
+                        </svg>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[14px] font-semibold text-[#e3e3e3]">Staged Package</span>
+                        <span id="selectedFileName" class="text-[12px] text-[#666666] transition-all">Awaiting system import...</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span id="rowBadge" class="text-xs font-bold text-[#666666] bg-white/[0.03] px-2.5 py-1 rounded-lg uppercase tracking-wide transition-all">Empty</span>
+                </div>
+            </div>
+
+            <!-- Row Meta Data Item: Safe Validation Check -->
+            <div class="flex items-center justify-between p-3.5 rounded-2xl hover:bg-white/[0.02] transition-all">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-9 h-9 rounded-xl bg-white/[0.03] flex items-center justify-center text-[#888888]">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[14px] font-semibold text-[#e3e3e3]">Integrity Shield</span>
+                        <span class="text-[12px] text-[#666666]">Verifies hash blocks before overwriting</span>
+                    </div>
+                </div>
+                <span class="text-[12px] font-bold text-[#666666] bg-white/[0.03] px-2.5 py-1 rounded-lg uppercase tracking-wider">Active</span>
+            </div>
+        </div>
+
+        <!-- Action Button - Restructured to browse and import fields with contextual workflow logic -->
+        <div class="flex flex-col gap-4">
+            <button id="masterActionButton" onclick="triggerFileSearchWorkflow()" class="w-full py-4 bg-gradient-to-r from-[#a882ff] to-[#bda0ff] hover:opacity-95 active:scale-[0.99] text-[#121212] text-[15px] font-bold rounded-2xl shadow-xl shadow-[#a882ff]/10 flex items-center justify-center gap-2.5 transition-all cursor-pointer">
+                <svg id="buttonIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4.5 h-4.5 transition-transform duration-300">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6.75-6.75M12 19.5l-6.75-6.75" />
+                </svg>
+                <span id="buttonText">Browse Export File</span>
+            </button>
+        </div>
+
+        <!-- Fine Print Footer Notes -->
+        <p class="text-[12px] text-red-400/60 text-center max-w-xs mx-auto leading-relaxed font-medium mt-8">
+            Warning: Restoring structural data will completely replace your current local database image.
+        </p>
+
+    </div>
+
+    <!-- UI State Simulation Processor Logic -->
+    <script>
+        let selectedFilePayload = null;
+
+        // Triggers the hidden native system file browsing menu matrix
+        function triggerFileSearchWorkflow() {
+            if (!selectedFilePayload) {
+                document.getElementById('nativeFilePicker').click();
+            } else {
+                executeDatabaseDecompression();
+            }
+        }
+
+        // Handles data parsing after user picks a concrete system file node
+        function handleFileSelection(event) {
+            const uploadedFile = event.target.files[0];
+            if (!uploadedFile) return;
+
+            selectedFilePayload = uploadedFile;
+
+            // Formulate human readable metadata file size metrics
+            const parsedSize = (uploadedFile.size / 1024).toFixed(2) + " KB";
+
+            // Update UI elements based on loaded schema properties
+            document.getElementById('selectedFileName').innerText = uploadedFile.name;
+            document.getElementById('selectedFileName').classList.remove('text-[#666666]');
+            document.getElementById('selectedFileName').classList.add('text-[#a882ff]', 'font-semibold');
+            
+            document.getElementById('fileSizeDisplay').innerText = parsedSize;
+            document.getElementById('fileSizeDisplay').classList.remove('text-[#666666]');
+            document.getElementById('fileSizeDisplay').classList.add('text-white');
+
+            const statusNode = document.getElementById('detectedBackups');
+            statusNode.innerText = "Ready to Import";
+            statusNode.classList.remove('text-[#b5b5b5]');
+            statusNode.classList.add('text-[#a882ff]');
+
+            // Turn card elements into active glowing accent themes
+            document.getElementById('statusCard').classList.add('shimmer-bg', 'border-[#a882ff]/20');
+            document.getElementById('fileIconWrapper').classList.remove('bg-white/[0.03]', 'text-[#888888]');
+            document.getElementById('fileIconWrapper').classList.add('bg-[#a882ff]/10', 'text-[#a882ff]');
+            document.getElementById('fileRowContainer').classList.add('bg-[#a882ff]/[0.02]');
+
+            const badgeNode = document.getElementById('rowBadge');
+            badgeNode.innerText = "Staged";
+            badgeNode.classList.remove('text-[#666666]', 'bg-white/[0.03]');
+            badgeNode.classList.add('text-[#a882ff]', 'bg-[#a882ff]/10');
+
+            // Morph hero icon presentation metrics
+            document.getElementById('heroIconContainer').classList.add('glow-active');
+            document.getElementById('heroIcon').style.transform = 'rotate(-180deg)';
+
+            // Dynamically morph the master actionable state button text contents to functional mode
+            document.getElementById('buttonText').innerText = "Decompress & Restore State";
+            // Replace the browse down arrow icon vector with an explicit overwrite cloud up icon matrix
+            document.getElementById('buttonIcon').innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 19.5v-15m0 0l-6.75 6.75M12 4.5l6.75 6.75" />`;
+        }
+
+        // Executes final payload system database isolation override
+        function executeDatabaseDecompression() {
+            console.log("Injecting archive hash arrays into the device cache filesystem structural database...");
+            alert(`Success! "${selectedFilePayload.name}" sandbox records have been fully extracted and deployed. Reloading runtime profile structures.`);
+            
+            // Clean interface properties back to system baseline context
+            location.reload();
+        }
+    </script>
+</body>
+</html>

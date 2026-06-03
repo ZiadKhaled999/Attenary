@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium Attenary Dark Theme Fluid Glass Navbar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN for sleek vector graphics paths -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      /* 1.1 Base Colors (Dark Mode Scale) */
+      --base-00: #1e1e1e; /* Deepest background / canvas[cite: 4] */
+      --base-05: #212121; /* Primary background[cite: 4] */
+      --base-10: #242424; /* Elevated surfaces[cite: 4] */
+      --base-20: #262626; /* Secondary background[cite: 4] */
+      --base-25: #2a2a2a; /* Subtle borders / dividers[cite: 4] */
+      --base-30: #363636; /* Borders[cite: 4] */
+      --base-35: #3f3f3f; /* Hover borders[cite: 4] */
+      --base-40: #555555; /* Disabled text / icons[cite: 4] */
+      --base-50: #666666; /* Muted text[cite: 4] */
+      --base-60: #999999; /* Secondary text[cite: 4] */
+      --base-70: #bababa; /* Primary text (dark mode)[cite: 4] */
+      --base-100: #dadada; /* Highlight text[cite: 4] */
+
+      /* 1.2 Accent Color Tokens[cite: 4] */
+      --accent-h: 254;/*[cite: 4] */
+      --accent-s: 80%;/*[cite: 4] */
+      --accent-l: 68%;/*[cite: 4] */
+
+      /* 1.4 Black & White Masks (Dark Mode Specific)[cite: 4] */
+      --mono-rgb-0: 0, 0, 0;/*[cite: 4] */
+      --mono-rgb-100: 255, 255, 255;/*[cite: 4] */
+
+      /* 1.5 Semantic Color Mapping[cite: 4] */
+      --background-primary: var(--base-05);/*[cite: 4] */
+      --background-secondary: var(--base-20);/*[cite: 4] */
+      --background-modifier-border: var(--base-30);/*[cite: 4] */
+      --background-modifier-border-hover: var(--base-35);/*[cite: 4] */
+      --interactive-accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l));/*[cite: 4] */
+      --text-normal: var(--base-70);/*[cite: 4] */
+      --text-muted: var(--base-50);/*[cite: 4] */
+      --text-faint: var(--base-40);/*[cite: 4] */
+      --text-accent: var(--interactive-accent);/*[cite: 4] */
+      --text-on-accent: #ffffff;/*[cite: 4] */
+
+      /* 2.1 Spacing System (4-Pixel Grid Tokens)[cite: 4] */
+      --size-4-1: 4px;/*[cite: 4] */
+      --size-4-2: 8px;/*[cite: 4] */
+      --size-4-3: 12px;/*[cite: 4] */
+      --size-4-4: 16px;/*[cite: 4] */
+      --size-4-5: 20px;/*[cite: 4] */
+      --size-4-6: 24px;/*[cite: 4] */
+      --size-4-8: 32px;/*[cite: 4] */
+      --size-4-12: 48px;/*[cite: 4] */
+    }
+
+    body {
+      background-color: var(--base-00);/*[cite: 4] */
+    }
+
+    /* High-performance fluid slide easing */
+    .fluid-transition {
+      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), 
+                  width 0.4s cubic-bezier(0.25, 1, 0.5, 1), 
+                  left 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* Tactile liquid morph interaction when tab is active */
+    .fluid-pill.morphing {
+      animation: jellyEffect 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* Target the injected SVGs directly to guarantee crisp white color */
+    .nav-item button svg {
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.25s ease;
+      stroke: #ffffff !important; /* FORCED STATIC CRISP WHITE AS REQUESTED */
+      opacity: 0.4; /* Inactive tabs are slightly transparent instead of gray/black */
+    }
+    
+    /* Hover micro-interactions */
+    .nav-item button:hover:not(.active-tab) svg {
+      opacity: 1 !important; 
+      transform: translateY(-2px);
+    }
+    
+    /* Active tab states */
+    .active-tab svg {
+      opacity: 1 !important;
+      transform: scale(1.12) translateY(-1px);
+      filter: drop-shadow(0 2px 8px rgba(var(--mono-rgb-100), 0.4));/*[cite: 4] */
+    }
+
+    /* Glassmorphism panel styling bound strictly to token masks */
+    .glass-panel {
+      background: rgba(var(--mono-rgb-0), 0.45);/*[cite: 4] */
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--background-modifier-border);/*[cite: 4] */
+      padding: var(--size-4-2);/*[cite: 4] */
+      border-radius: var(--size-4-8);/*[cite: 4] */
+      box-shadow: 
+        0 20px 50px -12px rgba(var(--mono-rgb-0), 0.6),/*[cite: 4] */
+        inset 0 1.5px 1px rgba(var(--mono-rgb-100), 0.08),  /* Top rim light catch[cite: 4] */
+        inset 0 -1px 1px rgba(var(--mono-rgb-100), 0.02);  /* Bottom light catch[cite: 4] */
+    }
+
+    /* Fluid indicator styling driven entirely by the brand accent formula */
+    .fluid-pill {
+      background: var(--interactive-accent);/*[cite: 4] */
+      border-radius: var(--size-4-6);/*[cite: 4] */
+      box-shadow: 
+        inset 0 1px 1px rgba(var(--mono-rgb-100), 0.2),/*[cite: 4] */
+        0 6px 14px -4px rgba(var(--mono-rgb-0), 0.5);/*[cite: 4] */
+    }
+
+    .nav-btn {
+      height: var(--size-4-12);/*[cite: 4] */
+      border-radius: var(--size-4-6);/*[cite: 4] */
+    }
+
+    @keyframes jellyEffect {
+      0% { transform: scaleX(1) scaleY(1); }
+      30% { transform: scaleX(1.15) scaleY(0.85); }
+      60% { transform: scaleX(0.9) scaleY(1.05); }
+      100% { transform: scaleX(1) scaleY(1); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 select-none overflow-hidden">
+
+  <!-- Main Dark Theme Navbar Container -->
+  <nav class="glass-panel w-full max-w-md relative">
+    
+    <!-- Dynamic Fluid Backing Pill Container -->
+    <div id="fluid-indicator" class="fluid-pill absolute fluid-transition pointer-events-none"></div>
+
+    <!-- Interactive Navigation Items -->
+    <ul id="navbar" class="relative z-10 flex items-center justify-between">
+      
+      <!-- Home -->
+      <li class="nav-item flex-1 flex justify-center">
+        <button class="active-tab nav-btn relative flex items-center justify-center w-full" aria-label="Home">
+          <i data-lucide="home" class="w-[20px] h-[20px] stroke-[2.2]"></i>
+        </button>
+      </li>
+
+      <!-- Daily Logs -->
+      <li class="nav-item flex-1 flex justify-center">
+        <button class="nav-btn relative flex items-center justify-center w-full" aria-label="Daily Logs">
+          <i data-lucide="calendar-days" class="w-[20px] h-[20px] stroke-[2.2]"></i>
+        </button>
+      </li>
+
+      <!-- Monthly Report -->
+      <li class="nav-item flex-1 flex justify-center">
+        <button class="nav-btn relative flex items-center justify-center w-full" aria-label="Monthly Report">
+          <i data-lucide="file-text" class="w-[20px] h-[20px] stroke-[2.2]"></i>
+        </button>
+      </li>
+
+      <!-- History -->
+      <li class="nav-item flex-1 flex justify-center">
+        <button class="nav-btn relative flex items-center justify-center w-full" aria-label="History">
+          <i data-lucide="history" class="w-[20px] h-[20px] stroke-[2.2]"></i>
+        </button>
+      </li>
+
+      <!-- Analytics -->
+      <li class="nav-item flex-1 flex justify-center">
+        <button class="nav-btn relative flex items-center justify-center w-full" aria-label="Analytics">
+          <i data-lucide="bar-chart-3" class="w-[20px] h-[20px] stroke-[2.2]"></i>
+        </button>
+      </li>
+
+      <!-- Profile -->
+      <li class="nav-item flex-1 flex justify-center">
+        <button class="nav-btn relative flex items-center justify-center w-full" aria-label="Profile">
+          <i data-lucide="user" class="w-[20px] h-[20px] stroke-[2.2]"></i>
+        </button>
+      </li>
+
+      <!-- More -->
+      <li class="nav-item flex-1 flex justify-center">
+        <button class="nav-btn relative flex items-center justify-center w-full" aria-label="More Options">
+          <i data-lucide="more-horizontal" class="w-[20px] h-[20px] stroke-[2.2]"></i>
+        </button>
+      </li>
+
+    </ul>
+  </nav>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // Initialize Lucide vector geometries
+      lucide.createIcons();
+
+      const navContainer = document.querySelector(".glass-panel");
+      const navItems = document.querySelectorAll("#navbar .nav-item button");
+      const indicator = document.getElementById("fluid-indicator");
+
+      // Calculates alignment layout bounding metrics dynamically
+      function updateIndicator(activeItem, animate = true) {
+        if (!activeItem) return;
+        
+        const navRect = navContainer.getBoundingClientRect();
+        const itemRect = activeItem.getBoundingClientRect();
+
+        // Calculate accurate localized offsets independent of outer DOM layout shifts
+        const leftOffset = itemRect.left - navRect.left;
+        const topOffset = itemRect.top - navRect.top;
+
+        if (!animate) {
+          indicator.style.transition = 'none';
+        } else {
+          indicator.style.transition = '';
+          // Trigger the liquid elastic morph keyframe animation sequence cleanly
+          indicator.classList.remove("morphing");
+          void indicator.offsetWidth; // Force CSS repaint event
+          indicator.classList.add("morphing");
+        }
+
+        indicator.style.width = `${itemRect.width}px`;
+        indicator.style.height = `${itemRect.height}px`;
+        indicator.style.left = `${leftOffset}px`;
+        indicator.style.top = `${topOffset}px`;
+      }
+
+      // Initial alignment runtime parsing initialization setup 
+      const initialActive = document.querySelector("#navbar button.active-tab");
+      setTimeout(() => updateIndicator(initialActive, false), 50);
+
+      navItems.forEach((item) => {
+        item.addEventListener("click", () => {
+          if (item.classList.contains("active-tab")) return;
+
+          // Clear previous state selections
+          navItems.forEach((btn) => {
+            btn.classList.remove("active-tab");
+          });
+
+          // Mount targeting active state metrics
+          item.classList.add("active-tab");
+
+          // Animate fluid backing slide tracker flawlessly
+          updateIndicator(item, true);
+        });
+      });
+
+      // Maintain precision component measurements during viewport size alterations
+      window.addEventListener("resize", () => {
+        const currentActive = document.querySelector("#navbar button.active-tab");
+        updateIndicator(currentActive, false);
+      });
+    });
+  </script>
+</body>
+</html>

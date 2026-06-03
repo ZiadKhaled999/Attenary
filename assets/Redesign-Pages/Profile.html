@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Daily Logs - Obsidian Purple Theme</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* 1.1 Base Colors (Neutral Scale - Dark Mode) */
+            --base-00: #1e1e1e; /* Deepest background / canvas */
+            --base-05: #212121; /* Primary background */
+            --base-10: #242424; /* Elevated surfaces */
+            --base-20: #262626; /* Secondary background */
+            --base-25: #2a2a2a; /* Subtle borders / dividers */
+            --base-30: #363636; /* Borders */
+            --base-35: #3f3f3f; /* Hover borders */
+            --base-40: #555555; /* Disabled text / icons */
+            --base-50: #666666; /* Muted text */
+            --base-60: #999999; /* Secondary text */
+            --base-70: #bababa; /* Primary text variant */
+            --base-100: #dadada; /* Primary text */
+
+            /* 1.3 Extended Colors (Functional Palette - Purple Accent) */
+            --color-purple: #a882ff;
+            --color-purple-rgb: 168, 130, 255;
+
+            /* Semantic Mappings */
+            --background-primary: var(--base-05);
+            --background-secondary: var(--base-20);
+            --background-modifier-border: var(--base-25);
+            --text-normal: var(--base-100);
+            --text-muted: var(--base-50);
+            --text-accent: var(--color-purple);
+
+            /* 3.2 Font Sizes (Fixed UI Chrome) */
+            --font-ui-smaller: 12px;
+            --font-ui-small: 13px;
+            --font-ui-medium: 15px;
+            --font-ui-large: 20px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--base-00);
+            color: var(--text-normal);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Obsidian Dark Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(33, 33, 33, 0.75); /* --base-05 with opacity */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(168, 130, 255, 0.1); /* Subtle Purple Accent Border */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-input {
+            background: rgba(38, 38, 38, 0.5); /* --base-20 line opacity */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--base-30);
+            color: var(--text-normal);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-input:focus {
+            background: rgba(30, 30, 30, 0.9);
+            border-color: var(--color-purple);
+            box-shadow: 0 0 0 3px rgba(168, 130, 255, 0.2);
+        }
+
+        /* Custom typography utility enforcement */
+        .ui-large { font-size: var(--font-ui-large); }
+        .ui-medium { font-size: var(--font-ui-medium); }
+        .ui-small { font-size: var(--font-ui-small); }
+        .ui-smaller { font-size: var(--font-ui-smaller); }
+
+        /* Smooth flash animation class for saved changes */
+        .text-accent-flash {
+            color: var(--color-purple) !important;
+            transition: color 0.2s ease;
+        }
+    </style>
+</head>
+<body class="min-h-screen w-full flex justify-center items-center p-3 sm:p-6 overflow-x-hidden">
+
+    <div class="w-full max-w-md glass-panel rounded-[38px] p-6 flex flex-col gap-6 relative overflow-hidden transition-all duration-500 hover:shadow-2xl">
+        
+        <!-- Ambient Background Ambient Orbs Remapped to Obsidian Purple -->
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-purple-900/20 rounded-full blur-2xl opacity-40 pointer-events-none"></div>
+        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-950/30 rounded-full blur-2xl opacity-40 pointer-events-none"></div>
+
+        <div class="flex flex-col items-center text-center gap-3 z-10 pt-2">
+            <div class="relative group cursor-pointer" onclick="triggerImageUpload()">
+                <div class="w-24 h-24 rounded-full p-1 bg-[var(--base-20)] border border-[var(--base-30)] shadow-md transition-transform duration-300 group-hover:scale-105">
+                    <div class="w-full h-full rounded-full overflow-hidden bg-[var(--base-05)] flex items-center justify-center relative">
+                        <img id="avatarPreview" src="" alt="Profile Image" class="w-full h-full object-cover hidden">
+                        <div id="avatarFallback" class="text-[var(--color-purple)] flex flex-col items-center justify-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <!-- Text-on-accent contrast adaptation applied (Dark text on vibrant purple element) -->
+                <div class="absolute bottom-0 right-0 bg-[var(--color-purple)] text-[var(--base-00)] p-1.5 rounded-full shadow-md border-2 border-[var(--base-00)] transform translate-x-1 translate-y-1 transition-colors hover:opacity-90">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                    </svg>
+                </div>
+            </div>
+            <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelection(event)">
+
+            <div class="flex flex-col gap-0.5">
+                <h1 class="ui-large font-bold text-[var(--base-100)] tracking-tight">Daily Logs</h1>
+                <p class="ui-smaller text-[var(--base-60)] font-medium">Manage your personal information</p>
+            </div>
+        </div>
+
+        <div class="w-full bg-[var(--base-10)]/40 backdrop-blur-md rounded-2xl border border-[var(--base-25)] p-4 flex flex-col gap-3.5 shadow-sm z-10">
+            <div class="flex justify-between items-center pb-2 border-b border-[var(--base-25)]">
+                <span class="ui-smaller font-bold uppercase tracking-wider text-[var(--base-50)]">Personal Information</span>
+            </div>
+
+            <div class="group flex items-center justify-between p-2 rounded-xl hover:bg-[var(--base-30)]/40 transition-all duration-300 cursor-pointer" onclick="openEditModal('name', 'Full Name', 'Ziad Khaled Mohamed')">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-xl bg-[var(--base-20)] flex items-center justify-center text-[var(--color-purple)] shrink-0 shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="ui-smaller font-bold tracking-wide text-[var(--base-50)] uppercase">Full Name</p>
+                        <p id="val-name" class="ui-medium font-semibold text-[var(--base-100)] truncate">Ziad Khaled Mohamed</p>
+                    </div>
+                </div>
+                <div class="text-[var(--base-40)] group-hover:text-[var(--color-purple)] transition-colors duration-200 pl-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 transform group-hover:scale-110 transition-transform">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="group flex items-center justify-between p-2 rounded-xl hover:bg-[var(--base-30)]/40 transition-all duration-300 cursor-pointer" onclick="openEditModal('email', 'Email Address', 'albhyrytwamrwhy@gmail.com')">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-xl bg-[var(--base-20)] flex items-center justify-center text-[var(--color-purple)] shrink-0 shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="ui-smaller font-bold tracking-wide text-[var(--base-50)] uppercase">Email Address</p>
+                        <p id="val-email" class="ui-medium font-semibold text-[var(--base-100)] truncate break-all">albhyrytwamrwhy@gmail.com</p>
+                    </div>
+                </div>
+                <div class="text-[var(--base-40)] group-hover:text-[var(--color-purple)] transition-colors duration-200 pl-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 transform group-hover:scale-110 transition-transform">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="group flex items-center justify-between p-2 rounded-xl hover:bg-[var(--base-30)]/40 transition-all duration-300 cursor-pointer" onclick="openEditModal('title', 'Job Title', 'Entrepreneur & Computer Engineer')">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-xl bg-[var(--base-20)] flex items-center justify-center text-[var(--color-purple)] shrink-0 shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .621-.504 1.125-1.125 1.125H4.875A1.125 1.125 0 0 1 3.75 18.4V14.15m16.5 0c0-1.22-.736-2.298-1.875-2.714l-11.25-4.113a2.25 2.25 0 0 0-1.5 0l-1.125.412m15.75 6.415a6.75 6.75 0 0 1-15 0M21.75 12a2.25 2.25 0 0 1-2.25 2.25H4.5A2.25 2.25 0 0 1 2.25 12V6.25m19.5 0A2.25 2.25 0 0 0 19.5 4H4.5a2.25 2.25 0 0 0-2.25 2.25V12m19.5 0A2.25 2.25 0 0 1 19.5 14.25H4.5A2.25 2.25 0 0 1 2.25 12V6.25" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="ui-smaller font-bold tracking-wide text-[var(--base-50)] uppercase">Job Title</p>
+                        <p id="val-title" class="ui-medium font-semibold text-[var(--base-100)] truncate">Entrepreneur & Computer Engineer</p>
+                    </div>
+                </div>
+                <div class="text-[var(--base-40)] group-hover:text-[var(--color-purple)] transition-colors duration-200 pl-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 transform group-hover:scale-110 transition-transform">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="group flex items-center justify-between p-2 rounded-xl hover:bg-[var(--base-30)]/40 transition-all duration-300 cursor-pointer" onclick="openEditModal('dept', 'Department', 'Business & Computer Science')">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-xl bg-[var(--base-20)] flex items-center justify-center text-[var(--color-purple)] shrink-0 shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="ui-smaller font-bold tracking-wide text-[var(--base-50)] uppercase">Department</p>
+                        <p id="val-dept" class="ui-medium font-semibold text-[var(--base-100)] truncate">Business & Computer Science</p>
+                    </div>
+                </div>
+                <div class="text-[var(--base-40)] group-hover:text-[var(--color-purple)] transition-colors duration-200 pl-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 transform group-hover:scale-110 transition-transform">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal Elements Realigned to Obsidian Tokens -->
+    <div id="editModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-end sm:items-center p-0 sm:p-4 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="w-full sm:max-w-md bg-[var(--base-05)] border border-[var(--base-30)] rounded-t-[28px] sm:rounded-[24px] p-6 shadow-2xl transform translate-y-full sm:translate-y-4 transition-transform duration-300 ease-out">
+            <div class="w-12 h-1.5 bg-[var(--base-25)] rounded-full mx-auto mb-5 sm:hidden"></div>
+            
+            <h3 id="modalTitle" class="ui-medium font-bold text-[var(--base-100)] mb-1">Edit Field</h3>
+            <p class="ui-smaller text-[var(--base-50)] mb-4">Update your profile detail instantly.</p>
+            
+            <input type="text" id="modalInput" class="w-full px-4 py-3 rounded-xl glass-input ui-small font-medium outline-none mb-5">
+            
+            <div class="flex gap-3 w-full">
+                <button onclick="closeEditModal()" class="flex-1 py-3 bg-[var(--base-25)] hover:bg-[var(--base-35)] active:scale-98 text-[var(--base-100)] ui-smaller font-bold rounded-xl transition-all">
+                    Cancel
+                </button>
+                <button onclick="saveEditModal()" class="flex-1 py-3 bg-[var(--color-purple)] hover:opacity-90 active:scale-98 text-[var(--base-00)] ui-smaller font-bold rounded-xl shadow-md transition-all">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentEditingKey = '';
+
+        function triggerImageUpload() {
+            document.getElementById('imageInput').click();
+        }
+
+        function handleImageSelection(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('avatarPreview');
+                    const fallback = document.getElementById('avatarFallback');
+                    
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                    fallback.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function openEditModal(key, title, fallbackValue) {
+            currentEditingKey = key;
+            const currentDisplayValue = document.getElementById(`val-${key}`).innerText;
+            
+            document.getElementById('modalTitle').innerText = `Edit ${title}`;
+            document.getElementById('modalInput').value = currentDisplayValue;
+            
+            const modal = document.getElementById('editModal');
+            const modalContent = modal.querySelector('div');
+            
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modalContent.classList.remove('translate-y-full', 'sm:translate-y-4');
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editModal');
+            const modalContent = modal.querySelector('div');
+            
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modalContent.classList.add('translate-y-full', 'sm:translate-y-4');
+        }
+
+        function saveEditModal() {
+            const updatedValue = document.getElementById('modalInput').value.trim();
+            if(updatedValue && currentEditingKey) {
+                const targetElement = document.getElementById(`val-${currentEditingKey}`);
+                targetElement.innerText = updatedValue;
+                
+                targetElement.classList.add('text-accent-flash', 'scale-102');
+                setTimeout(() => {
+                    targetElement.classList.remove('text-accent-flash', 'scale-102');
+                }, 800);
+            }
+            closeEditModal();
+        }
+    </script>
+</body>
+</html>

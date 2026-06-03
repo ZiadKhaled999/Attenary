@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Attenary - Monthly Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            /* Official Obsidian Dark Theme Design System Tokens */
+            --base-00: #1e1e1e; /* Deepest canvas background */
+            --base-05: #212121; /* Primary surface background */
+            --base-10: #242424; /* Elevated cards and panels */
+            --base-20: #262626; /* Secondary structural layers */
+            --base-25: #2a2a2a; /* Subtle dividers and inner borders */
+            --base-30: #363636; /* Visible borders / UI controls */
+            --base-40: #555555; /* Disabled elements and states */
+            --base-50: #666666; /* Muted label headers / metadata */
+            --base-60: #999999; /* Secondary descriptive text layout */
+            --base-70: #bababa; /* Primary readable paragraph text */
+            --base-100: #dadada; /* High contrast white headers */
+
+            /* Functional Obsidian Purple Accents */
+            --color-purple: #a882ff;
+            --color-purple-rgb: 168, 130, 255;
+            --mono-rgb-0: 0, 0, 0;
+            --mono-rgb-100: 255, 255, 255;
+
+            /* Strict Typography Tokens */
+            --font-interface-theme: 'Inter', sans-serif;
+            --font-monospace-theme: 'JetBrains Mono', monospace;
+            
+            /* UI Chrome Font Sizing Guidelines */
+            --font-ui-smaller: 12px;
+            --font-ui-small: 13px;
+            --font-ui-medium: 15px;
+            --font-ui-large: 20px;
+        }
+
+        body {
+            font-family: var(--font-interface-theme);
+            background-color: var(--base-00);
+            color: var(--base-70);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .premium-card {
+            background-color: var(--base-10);
+            border: 1px solid var(--base-25);
+            box-shadow: 0 4px 12px rgba(var(--mono-rgb-0), 0.2);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .font-mono {
+            font-family: var(--font-monospace-theme);
+        }
+    </style>
+</head>
+<body class="min-h-screen w-full flex flex-col items-center select-none antialiased p-4 overflow-x-hidden">
+
+    <main class="w-full max-w-md flex flex-col gap-5 mt-2">
+        
+        <!-- Header Top Bar -->
+        <div class="w-full flex justify-between items-center pt-2">
+            <h1 class="font-bold tracking-tight text-white" style="font-size: var(--font-ui-large);">Monthly Report</h1>
+            
+            <!-- Contextual Dropdown Year Switcher -->
+            <div class="relative inline-block text-left" id="yearSelectorDropdown">
+                <button onclick="toggleYearDropdown()" class="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all duration-150 active:scale-98" style="background-color: var(--base-05); border: 1px solid var(--base-30); color: var(--base-100);">
+                    <span id="active-year-label">2026</span>
+                    <svg class="w-3 h-3 transition-transform duration-200" style="color: var(--base-60);" id="dropdownChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div id="yearDropdownMenu" class="hidden absolute right-0 mt-1.5 w-24 rounded-lg shadow-xl z-50 py-1 transition-all duration-150" style="background-color: var(--base-05); border: 1px solid var(--base-30);">
+                </div>
+            </div>
+        </div>
+
+        <!-- Compact Month Selector Carousel -->
+        <div class="flex flex-col gap-2">
+            <div class="flex gap-2 overflow-x-auto py-1 no-scrollbar touch-pan-x" id="monthCarousel">
+            </div>
+        </div>
+
+        <!-- Core Statistics Grid Widget -->
+        <div class="grid grid-cols-3 gap-2.5">
+            <div class="premium-card rounded-xl p-3.5 flex flex-col items-start justify-between min-h-[72px]">
+                <span class="text-[10px] font-medium uppercase tracking-wider block" style="color: var(--base-50);">Tracked</span>
+                <span id="metric-hours" class="text-base font-bold font-mono text-white mt-1">0h</span>
+            </div>
+            <div class="premium-card rounded-xl p-3.5 flex flex-col items-start justify-between min-h-[72px]">
+                <span class="text-[10px] font-medium uppercase tracking-wider block" style="color: var(--base-50);">Sessions</span>
+                <span id="metric-sessions" class="text-base font-bold font-mono text-white mt-1">0</span>
+            </div>
+            <div class="premium-card rounded-xl p-3.5 flex flex-col items-start justify-between min-h-[72px]">
+                <span class="text-[10px] font-medium uppercase tracking-wider block" style="color: var(--base-50);">Active Days</span>
+                <span id="metric-days" class="text-base font-bold font-mono text-white mt-1">0 d</span>
+            </div>
+        </div>
+
+        <!-- Adaptive Layout Day Log Matrix -->
+        <div class="w-full premium-card rounded-xl p-4 flex flex-col gap-4 shadow-xs">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: var(--color-purple);"></span>
+                    <h2 id="chart-title" class="text-[11px] font-semibold uppercase tracking-wider" style="color: var(--base-60);">Daily Breakdown</h2>
+                </div>
+            </div>
+            
+            <!-- Standard Full Container Graph Viewport -->
+            <div class="w-full relative h-44">
+                <canvas id="dailyLogChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Dynamic Peak Output Indicator Box -->
+        <section class="w-full">
+            <div class="premium-card rounded-xl p-4 flex items-center justify-between">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--base-60);">Peak Output</span>
+                    <span class="text-[11px] mt-0.5" style="color: var(--base-50);">Highest single-day focus duration</span>
+                </div>
+                <span id="insight-peak" class="text-base font-bold font-mono" style="color: var(--color-purple);">0.0 hrs</span>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const accountJoinYear = 2024;
+        const currentSystemYear = 2026;
+        
+        const db = {
+            2024: {
+                'Nov': [0,2,3,4,0,0,6,7,2,1,0,4,5,6,0,0,8,4,2,0,5,6,4,0,1,2,3,0,0,4],
+                'Dec': [4,5,6,2,0,0,8,9,3,2,0,0,6,7,8,4,0,0,5,6,7,2,0,0,4,5,6,10,8,4,2]
+            },
+            2025: {
+                'Jan': [4,0,6,8,2,0,0,5,7,9,4,0,1,6,8,5,2,0,0,8,7,6,5,4,0,0,3,9,8,4,2],
+                'Feb': [5,6,7,8,2,0,0,4,5,6,7,2,0,0,8,9,10,4,2,0,0,6,7,8,9,3,0,0],
+                'Mar': [0,0,4,5,6,12,3,0,0,5,6,7,8,2,0,0,6,7,8,9,4,0,0,5,6,10,11,2,0,0,4],
+                'Apr': [6,7,8,2,0,0,5,6,7,8,4,0,0,9,10,5,4,2,0,0,6,7,8,9,2,0,0,4,5,6],
+                'May': [4,5,6,7,2,0,0,8,9,10,4,2,0,0,6,7,8,9,3,0,0,5,6,7,8,2,0,0,4,5,6],
+                'Jun': [0,0,6,7,8,9,2,0,0,5,6,7,8,4,0,0,12,14,6,4,2,0,0,7,8,9,10,3,0,0],
+                'Jul': [5,6,7,8,2,0,0,4,5,6,7,3,0,0,8,9,10,4,2,0,0,6,7,8,9,4,0,0,5,6,7],
+                'Aug': [4,5,6,2,0,0,8,9,10,4,3,0,0,6,7,8,9,2,0,0,5,6,7,8,4,0,0,9,10,5,2],
+                'Sep': [6,7,8,9,3,0,0,5,6,7,8,2,0,0,4,11,12,5,2,0,0,6,7,8,9,3,0,0,4,5],
+                'Oct': [4,5,6,7,2,0,0,8,9,10,4,2,0,0,6,7,8,9,3,0,0,5,6,7,8,2,0,0,4,5,6],
+                'Nov': [5,6,7,8,3,0,0,4,5,6,7,2,0,0,8,9,10,4,2,0,0,6,7,8,9,4,0,0,5,6],
+                'Dec': [4,0,0,8,9,10,4,2,0,0,6,7,8,9,3,0,0,5,6,7,8,2,0,0,4,5,6,11,12,4,2]
+            },
+            2026: {
+                'Jan': [8,8,4,0,0,7,9,8,6,5,0,0,7,8,9,10,4,0,0,6,7,8,8,5,0,0,9,9,6,7,4],
+                'Feb': [4,5,6,7,2,0,0,8,9,10,4,2,0,0,6,7,8,9,3,0,0,5,6,7,8,2,0,0],
+                'Mar': [6,7,8,9,3,0,0,5,6,7,8,2,0,0,4,11,12,5,2,0,0,6,7,8,9,3,0,0,4,5,8],
+                'Apr': [5,6,7,8,2,0,0,4,5,6,7,2,0,0,8,9,10,4,2,0,0,6,7,8,9,3,0,0,5,6],
+                'May': [4,0,0,8,9,10,4,2,0,0,6,7,8,9,3,0,0,5,6,7,8,2,0,0,4,5,6,11,12,4,2],
+                'Jun': [8,10,12,4,0,0,7,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], 
+                'Jul': Array(31).fill(0),
+                'Aug': Array(31).fill(0),
+                'Sep': Array(30).fill(0),
+                'Oct': Array(31).fill(0),
+                'Nov': Array(30).fill(0),
+                'Dec': Array(31).fill(0)
+            }
+        };
+
+        let selectedYear = currentSystemYear;
+        let selectedMonth = 'Jun';
+        let activeChart = null;
+
+        function initYearSwitcher() {
+            const dropdownMenu = document.getElementById('yearDropdownMenu');
+            dropdownMenu.innerHTML = '';
+            
+            for (let year = currentSystemYear; year >= accountJoinYear; year--) {
+                const opt = document.createElement('button');
+                opt.className = "w-full text-left px-4 py-2 text-xs transition-colors duration-150 block font-semibold first:rounded-t-md last:rounded-b-md";
+                opt.style.color = "var(--base-60)";
+                opt.style.fontFamily = "var(--font-interface-theme)";
+                opt.onmouseover = () => { opt.style.backgroundColor = "var(--base-25)"; opt.style.color = "var(--base-100)"; };
+                opt.onmouseout = () => { opt.style.backgroundColor = "transparent"; opt.style.color = "var(--base-60)"; };
+                opt.innerText = year;
+                opt.onclick = () => selectYear(year);
+                dropdownMenu.appendChild(opt);
+            }
+            document.getElementById('active-year-label').innerText = selectedYear;
+        }
+
+        function toggleYearDropdown() {
+            const menu = document.getElementById('yearDropdownMenu');
+            const chev = document.getElementById('dropdownChevron');
+            const isOpen = !menu.classList.contains('hidden');
+            
+            if (isOpen) {
+                menu.classList.add('hidden');
+                chev.classList.remove('rotate-180');
+            } else {
+                menu.classList.remove('hidden');
+                chev.classList.add('rotate-180');
+            }
+        }
+
+        function selectYear(year) {
+            selectedYear = year;
+            document.getElementById('active-year-label').innerText = selectedYear;
+            toggleYearDropdown();
+            
+            const validMonths = Object.keys(db[selectedYear]);
+            if (!validMonths.includes(selectedMonth)) {
+                selectedMonth = validMonths[0];
+            }
+            
+            initCarousel();
+            syncData();
+        }
+
+        function initCarousel() {
+            const carousel = document.getElementById('monthCarousel');
+            carousel.innerHTML = '';
+            
+            const targetMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            
+            targetMonths.forEach(m => {
+                const hasDataForMonth = db[selectedYear] && db[selectedYear][m];
+                const isSelected = (m === selectedMonth);
+                
+                const btn = document.createElement('button');
+                
+                if (!hasDataForMonth) {
+                    btn.className = "month-btn px-4 py-2 text-xs font-semibold rounded-xl cursor-not-allowed whitespace-nowrap";
+                    btn.style.backgroundColor = "rgba(38, 38, 38, 0.2)";
+                    btn.style.color = "var(--base-40)";
+                    btn.style.border = "1px solid var(--base-20)";
+                    btn.innerHTML = `<span>${m}</span>`;
+                } else {
+                    btn.className = `month-btn px-4 py-2 text-xs font-semibold rounded-xl transition-all duration-150 whitespace-nowrap active:scale-95 flex items-center gap-1 ${
+                        isSelected ? 'active-month' : ''
+                    }`;
+                    
+                    if (isSelected) {
+                        btn.style.backgroundColor = "var(--color-purple)";
+                        btn.style.color = "var(--base-00)";
+                        btn.style.fontWeight = "700";
+                        btn.style.boxShadow = "0 2px 8px rgba(168, 130, 255, 0.2)";
+                    } else {
+                        btn.style.backgroundColor = "rgba(36, 36, 36, 0.6)";
+                        btn.style.color = "var(--base-60)";
+                        btn.style.border = "1px solid var(--base-25)";
+                    }
+                    
+                    const hasActivity = db[selectedYear][m].some(v => v > 0);
+                    btn.innerHTML = isSelected 
+                        ? `<span>${m}</span>` 
+                        : `<span>${m}</span>${hasActivity ? '<span class="w-1 h-1 rounded-full" style="background-color: rgba(168, 130, 255, 0.5);"></span>' : ''}`;
+                    
+                    btn.onclick = () => selectMonth(m);
+                }
+                carousel.appendChild(btn);
+            });
+
+            const activeNode = carousel.querySelector('.active-month');
+            if (activeNode) {
+                carousel.scrollLeft = activeNode.offsetLeft - 120;
+            }
+        }
+
+        function selectMonth(month) {
+            selectedMonth = month;
+            initCarousel();
+            syncData();
+        }
+
+        function syncData() {
+            const dataArray = (db[selectedYear] && db[selectedYear][selectedMonth]) ? db[selectedYear][selectedMonth] : Array(30).fill(0);
+            
+            let totalHours = 0;
+            let sessions = 0;
+            let activeDays = 0;
+            let peakOutput = 0;
+
+            dataArray.forEach(val => {
+                if (val > 0) {
+                    totalHours += val;
+                    sessions += val > 4 ? 2 : 1;
+                    activeDays++;
+                    if (val > peakOutput) peakOutput = val;
+                }
+            });
+
+            document.getElementById('metric-hours').innerText = `${Math.floor(totalHours)}h`;
+            document.getElementById('metric-sessions').innerText = sessions;
+            document.getElementById('metric-days').innerText = activeDays;
+            document.getElementById('chart-title').innerText = `${selectedMonth} ${selectedYear} Metrics`;
+            document.getElementById('insight-peak').innerText = `${peakOutput.toFixed(1)} hrs`;
+
+            renderChart(dataArray);
+        }
+
+        function renderChart(daysData) {
+            const ctx = document.getElementById('dailyLogChart').getContext('2d');
+            
+            if (activeChart) {
+                activeChart.destroy();
+            }
+
+            const labels = Array.from({length: daysData.length}, (_, i) => {
+                const dayNum = i + 1;
+                return (dayNum === 1 || dayNum % 5 === 0 || dayNum === daysData.length) ? `${dayNum}` : '';
+            });
+
+            activeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: daysData,
+                        backgroundColor: daysData.map(v => v > 0 ? 'rgba(168, 130, 255, 0.85)' : 'rgba(54, 54, 54, 0.4)'),
+                        hoverBackgroundColor: '#a882ff',
+                        borderRadius: 3,
+                        borderSkipped: false,
+                        barPercentage: 0.75,
+                        categoryPercentage: 0.85
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: { left: 0, right: 4, top: 4, bottom: 0 }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#212121',
+                            titleFont: { size: 10, weight: 'bold', family: 'Inter' },
+                            bodyFont: { size: 10, family: 'JetBrains Mono' },
+                            padding: 8,
+                            cornerRadius: 6,
+                            borderColor: '#2a2a2a',
+                            borderWidth: 1,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(items) { 
+                                    return `${selectedMonth} ${items[0].dataIndex + 1}`; 
+                                },
+                                label: function(context) { return ` Tracked: ${context.raw}h`; }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { 
+                                font: { size: 9, family: 'JetBrains Mono' }, 
+                                color: '#666666',
+                                autoSkip: false,
+                                maxRotation: 0
+                            }
+                        },
+                        y: {
+                            min: 0,
+                            suggestedMax: 10,
+                            grid: { color: '#2a2a2a', drawTicks: false },
+                            border: { dash: [4, 4] },
+                            ticks: { 
+                                stepSize: 4,
+                                font: { size: 9, family: 'JetBrains Mono' }, 
+                                color: '#666666',
+                                callback: function(val) { return val + 'h'; }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('yearSelectorDropdown');
+            if (!dropdown.contains(event.target)) {
+                document.getElementById('yearDropdownMenu').classList.add('hidden');
+                document.getElementById('dropdownChevron').classList.remove('rotate-180');
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initYearSwitcher();
+            initCarousel();
+            syncData();
+        });
+    </script>
+</body>
+</html>

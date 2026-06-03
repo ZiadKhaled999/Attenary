@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Languages — Obsidian Dark Mode</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #1e1e1e; /* --base-00: Obsidian Canvas Dark Background */
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .glass-panel {
+            background: rgba(36, 36, 36, 0.7); /* --base-10: Surface Card Backing */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(54, 54, 54, 0.4); /* --base-30: Structural Layout Border */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        }
+
+        .list-divider {
+            border-color: #2a2a2a; /* --base-25: Internal structural boundaries */
+        }
+
+        /* Obsidian System Alert Callout styling replacing cyan tokens */
+        .info-callout {
+            background: rgba(168, 130, 255, 0.05);
+            border: 1px solid rgba(168, 130, 255, 0.25);
+        }
+    </style>
+</head>
+<body class="min-h-screen w-full flex justify-center items-start p-4 sm:p-6 overflow-x-hidden text-[#dadada] pt-12 sm:pt-16">
+
+    <div class="w-full max-w-md flex flex-col gap-6 relative z-10">
+        
+        <!-- Top Navigation Axis Layout mirroring structure from Screenshot 2026-06-03 175543.png -->
+        <div class="flex flex-col gap-1.5 items-start px-1">
+            <!-- Back Action Box Trigger Component -->
+            <button onclick="window.history.back()" class="w-11 h-11 rounded-xl bg-[#242424] border border-[#363636]/60 flex items-center justify-center text-[#dadada] hover:text-[#a882ff] active:scale-95 transition-all cursor-pointer mb-5">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                </svg>
+            </button>
+            
+            <h1 class="text-[34px] font-bold text-[#dadada] tracking-tight leading-none">Languages</h1>
+            <p class="text-[14px] text-[#777777] font-normal mt-1">Select your preferred language</p>
+        </div>
+
+        <!-- Language Selector Group Wrapper Card -->
+        <div class="w-full glass-panel rounded-[24px] p-2 flex flex-col">
+            
+            <!-- Item Row: English (Active State mapped to Obsidian Purple) -->
+            <div class="group flex items-center justify-between p-3.5 rounded-2xl bg-[#262626]/40 hover:bg-[#262626]/70 transition-all duration-300 cursor-pointer list-divider border-b" onclick="selectLanguage('en')">
+                <div class="flex items-center gap-4 min-w-0">
+                    <!-- Language Country Tag Badge Spec -->
+                    <div class="w-11 h-11 rounded-xl bg-[#2a2a2a] flex items-center justify-center text-[#a882ff] font-bold text-sm shrink-0 border border-[#a882ff]/20">
+                        US
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="text-[15px] font-bold text-[#a882ff]">English</p>
+                            <!-- Status Token Capsule Indicator -->
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-[#a882ff]/15 text-[#a882ff]">Current</span>
+                        </div>
+                        <p class="text-[12px] text-[#777777] font-normal mt-0.5">Left to right (LTR)</p>
+                    </div>
+                </div>
+                <!-- Selection Vector Checkmark Indicator -->
+                <div class="text-[#a882ff] pr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4.5 h-4.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Item Row: Arabic (Inactive State) -->
+            <div class="group flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#262626]/70 transition-all duration-300 cursor-pointer" onclick="selectLanguage('ar')">
+                <div class="flex items-center gap-4 min-w-0">
+                    <!-- Language Country Tag Badge Spec -->
+                    <div class="w-11 h-11 rounded-xl bg-[#242424] flex items-center justify-center text-[#666666] group-hover:text-[#dadada] font-bold text-sm shrink-0 border border-[#363636]/30 transition-colors">
+                        SA
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[16px] font-bold text-[#dadada] group-hover:text-[#a882ff] transition-colors font-sans" lang="ar" dir="rtl">العربية</p>
+                        <p class="text-[12px] text-[#777777] font-normal mt-0.5">Right to left (RTL)</p>
+                    </div>
+                </div>
+                <!-- Empty structural element matching right-side checklist container dimension parameters -->
+                <div class="w-5 pr-2"></div>
+            </div>
+
+        </div>
+
+        <!-- Reload Context Warning Banner Block adapted to Obsidian Color Specs -->
+        <div class="info-callout w-full rounded-2xl p-4 flex items-center gap-3.5 shadow-md">
+            <div class="text-[#a882ff] shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-.132-8.314-.366m16.628 0c-.552 1.675-2.053 2.924-3.864 3.255m-9.622-3.255A11.952 11.952 0 0 0 12 13.5c1.884 0 3.654-.143 5.314-.416m-10.628 0c.552 1.675 2.053 2.924 3.864 3.255" />
+                </svg>
+            </div>
+            <p class="text-[13px] text-[#a882ff] font-medium leading-normal">
+                Changing language will reload the app to apply the changes.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Framework Language Navigation Route Logic Hook Mock -->
+    <script>
+        function selectLanguage(localeCode) {
+            console.log(`Language node updated. Initializing app runtime layout translation refresh for target locale: "${localeCode}"`);
+            // Location configuration update execution block hook
+        }
+    </script>
+</body>
+</html>

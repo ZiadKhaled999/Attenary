@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Profile Settings — Obsidian Dark Mode</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #1e1e1e; /* --base-00: Obsidian Dark Background */
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .glass-panel {
+            background: rgba(36, 36, 36, 0.7); /* --base-10: Surface Card Background */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(54, 54, 54, 0.4); /* --base-30: Structural layout boundary border */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .list-divider {
+            border-color: #2a2a2a; /* --base-25: Internal surface layout boundary lines */
+        }
+    </style>
+</head>
+<body class="min-h-screen w-full flex justify-center items-center p-4 sm:p-6 overflow-x-hidden text-[#dadada]">
+
+    <div class="w-full max-w-md flex flex-col gap-6 relative z-10">
+        
+        <!-- Header Label matching layout from image_d71c3d.png -->
+        <div class="flex flex-col gap-1 px-1">
+            <span class="text-[12px] font-bold uppercase tracking-wider text-[#666666]">Settings & Info</span>
+        </div>
+
+        <!-- System Core Group Layout Matrix wrapper mirroring exact layout scheme from image_d71c3d.png -->
+        <div class="w-full glass-panel rounded-[28px] p-2 flex flex-col shadow-xl border border-[#363636]/50">
+            
+            <!-- Item 1: Feedbacks -->
+            <div class="group flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#262626]/70 transition-all duration-300 cursor-pointer list-divider border-b" onclick="navigateToPage('feedbacks')">
+                <div class="flex items-center gap-4 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-[#242424] flex items-center justify-center text-[#a882ff] shrink-0 shadow-inner border border-[#363636]/30">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[15px] font-semibold text-[#dadada]">Feedbacks</p>
+                        <p class="text-[12px] text-[#999999] truncate font-normal mt-0.5">Share your thoughts with us</p>
+                    </div>
+                </div>
+                <div class="text-[#555555] group-hover:text-[#a882ff] transition-colors duration-200 pr-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Item 2: Languages -->
+            <div class="group flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#262626]/70 transition-all duration-300 cursor-pointer list-divider border-b" onclick="navigateToPage('languages')">
+                <div class="flex items-center gap-4 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-[#242424] flex items-center justify-center text-[#a882ff] shrink-0 shadow-inner border border-[#363636]/30">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21a7.5 7.5 0 0 0 7.5-7.5h-7.5V21Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5H12V3a7.5 7.5 0 0 0-7.5 7.5Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 13.5V21a7.5 7.5 0 0 1-7.5-7.5h7.5Z" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[15px] font-semibold text-[#dadada]">Languages</p>
+                        <p class="text-[12px] text-[#999999] truncate font-normal mt-0.5">Change app language</p>
+                    </div>
+                </div>
+                <div class="text-[#555555] group-hover:text-[#a882ff] transition-colors duration-200 pr-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Item 3: Backup -->
+            <div class="group flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#262626]/70 transition-all duration-300 cursor-pointer list-divider border-b" onclick="navigateToPage('backup')">
+                <div class="flex items-center gap-4 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-[#242424] flex items-center justify-center text-[#a882ff] shrink-0 shadow-inner border border-[#363636]/30">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[15px] font-semibold text-[#dadada]">Backup</p>
+                        <p class="text-[12px] text-[#999999] truncate font-normal mt-0.5">Create a backup of your data</p>
+                    </div>
+                </div>
+                <div class="text-[#555555] group-hover:text-[#a882ff] transition-colors duration-200 pr-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Item 4: Restore Backup (Clean Translation Mapping Applied) -->
+            <div class="group flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#262626]/70 transition-all duration-300 cursor-pointer list-divider border-b" onclick="navigateToPage('restore')">
+                <div class="flex items-center gap-4 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-[#242424] flex items-center justify-center text-[#a882ff] shrink-0 shadow-inner border border-[#363636]/30">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[15px] font-semibold text-[#dadada]">Restore Backup</p>
+                        <p class="text-[12px] text-[#999999] truncate font-normal mt-0.5">Restore your app data seamlessly</p>
+                    </div>
+                </div>
+                <div class="text-[#555555] group-hover:text-[#a882ff] transition-colors duration-200 pr-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Item 5: About -->
+            <div class="group flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#262626]/70 transition-all duration-300 cursor-pointer list-divider border-b" onclick="navigateToPage('about')">
+                <div class="flex items-center gap-4 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-[#242424] flex items-center justify-center text-[#a882ff] shrink-0 shadow-inner border border-[#363636]/30">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 111.063.852l-.708 2.836a.75.75 0 001.063.852l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[15px] font-semibold text-[#dadada]">About</p>
+                        <p class="text-[12px] text-[#999999] truncate font-normal mt-0.5">Learn more about Attenary</p>
+                    </div>
+                </div>
+                <div class="text-[#555555] group-hover:text-[#a882ff] transition-colors duration-200 pr-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Item 6: Privacy Policy -->
+            <div class="group flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#262626]/70 transition-all duration-300 cursor-pointer list-divider border-b" onclick="navigateToPage('privacy')">
+                <div class="flex items-center gap-4 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-[#242424] flex items-center justify-center text-[#a882ff] shrink-0 shadow-inner border border-[#363636]/30">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25z" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[15px] font-semibold text-[#dadada]">Privacy Policy</p>
+                        <p class="text-[12px] text-[#999999] truncate font-normal mt-0.5">How we handle your data</p>
+                    </div>
+                </div>
+                <div class="text-[#555555] group-hover:text-[#a882ff] transition-colors duration-200 pr-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Item 7: Buy Me a Coffee -->
+            <div class="group flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#262626]/70 transition-all duration-300 cursor-pointer" onclick="navigateToPage('coffee')">
+                <div class="flex items-center gap-4 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-[#242424] flex items-center justify-center text-[#a882ff] shrink-0 shadow-inner border border-[#363636]/30">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21h6l-.813-5.096M21 12h-3.14m-12.72 0H2M16.5 6a4.5 4.5 0 0 1-9 0m9 0A4.5 4.5 0 0 0 12 1.5 4.5 4.5 0 0 0 7.5 6m9 0v6a4.5 4.5 0 0 1-9 0V6" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[15px] font-semibold text-[#dadada]">Buy Me a Coffee</p>
+                        <p class="text-[12px] text-[#999999] truncate font-normal mt-0.5">Support the developer</p>
+                    </div>
+                </div>
+                <div class="text-[#555555] group-hover:text-[#a882ff] transition-colors duration-200 pr-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer Platform Branding Section matching image footer spec signatures exactly -->
+        <div class="w-full flex flex-col items-center justify-center text-center pt-2 gap-0.5">
+            <h4 class="text-sm font-semibold text-[#dadada] tracking-wide">Attenary</h4>
+            <p class="text-xs text-[#666666] font-medium">Time Tracking Made Simple</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Modified system hook handler matching pure programmatic app navigation architecture
+        function navigateToPage(targetRoute) {
+            console.log(`Forwarding routing context to target scene: /settings/${targetRoute}`);
+            
+            // Framework window orientation location router trigger hook
+            // window.location.href = `./screens/${targetRoute}.html`;
+        }
+    </script>
+</body>
+</html>

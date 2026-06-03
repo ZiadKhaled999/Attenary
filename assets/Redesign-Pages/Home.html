@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Attenary - Premium Attendance</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          screens: {
+            'xs': '360px',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      /* 1.1 Base Colors (Dark Mode Scale) */
+      --base-00: #1e1e1e; /* Deepest background / canvas[cite: 6] */
+      --base-05: #212121; /* Primary background[cite: 6] */
+      --base-10: #242424; /* Elevated surfaces[cite: 6] */
+      --base-20: #262626; /* Secondary background[cite: 6] */
+      --base-25: #2a2a2a; /* Subtle borders / dividers[cite: 6] */
+      --base-30: #363636; /* Borders[cite: 6] */
+      --base-35: #3f3f3f; /* Hover borders[cite: 6] */
+      --base-40: #555555; /* Disabled text / icons[cite: 6] */
+      --base-50: #666666; /* Muted text[cite: 6] */
+      --base-60: #999999; /* Secondary text[cite: 6] */
+      --base-70: #bababa; /* Primary text (dark mode)[cite: 6] */
+      --base-100: #dadada; /* Highlight text[cite: 6] */
+
+      /* 1.2 Accent Color Tokens */
+      --accent-h: 254; /*[cite: 6] */
+      --accent-s: 80%; /*[cite: 6] */
+      --accent-l: 68%; /*[cite: 6] */
+
+      /* 1.3 Functional Palette (Extended Colors) */
+      --color-red: #fb464c; /*[cite: 6] */
+      --color-red-rgb: 251, 70, 76; /*[cite: 6] */
+      --color-cyan: #53dfdd; /*[cite: 6] */
+      --color-cyan-rgb: 83, 223, 221; /*[cite: 6] */
+      --color-yellow: #e0de71; /*[cite: 6] */
+      --color-yellow-rgb: 224, 222, 113; /*[cite: 6] */
+
+      /* 1.4 Black & White Masks (Dark Mode Specific) */
+      --mono-rgb-0: 0, 0, 0; /*[cite: 6] */
+      --mono-rgb-100: 255, 255, 255; /*[cite: 6] */
+
+      /* 1.5 Semantic Color Mapping */
+      --background-primary: var(--base-00); /*[cite: 6] */
+      --background-primary-alt: var(--base-05); /*[cite: 6] */
+      --background-secondary: var(--base-10); /*[cite: 6] */
+      --background-secondary-alt: var(--base-20); /*[cite: 6] */
+      --background-modifier-border: var(--base-25); /*[cite: 6] */
+      --background-modifier-border-hover: var(--base-35); /*[cite: 6] */
+      --background-modifier-form-field: var(--base-10); /*[cite: 6] */
+      --background-modifier-success: rgba(var(--color-cyan-rgb), 0.15);
+      --background-modifier-success-hover: rgba(var(--color-cyan-rgb), 0.25);
+      
+      --interactive-accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l)); /*[cite: 6] */
+      
+      --text-normal: var(--base-70); /*[cite: 6] */
+      --text-muted: var(--base-50); /*[cite: 6] */
+      --text-faint: var(--base-40); /*[cite: 6] */
+      --text-accent: var(--interactive-accent); /*[cite: 6] */
+      --text-on-accent: #ffffff; /*[cite: 6] */
+      --text-success: var(--color-cyan);
+      --text-error: var(--color-red); /*[cite: 6] */
+      --text-warning: var(--color-yellow); /*[cite: 6] */
+
+      /* 2.1 Spacing System (4-Pixel Grid Tokens) */
+      --size-4-1: 4px; /*[cite: 6] */
+      --size-4-2: 8px; /*[cite: 6] */
+      --size-4-3: 12px; /*[cite: 6] */
+      --size-4-4: 16px; /*[cite: 6] */
+      --size-4-5: 20px; /*[cite: 6] */
+      --size-4-6: 24px; /*[cite: 6] */
+      --size-4-8: 32px; /*[cite: 6] */
+      --size-4-9: 36px; /*[cite: 6] */
+      --size-4-12: 48px; /*[cite: 6] */
+
+      /* 3.1 & 3.2 Typography Tokens */
+      --font-interface-theme: 'Inter', system-ui, -apple-system, sans-serif; /*[cite: 6] */
+      --font-ui-smaller: 12px; /*[cite: 6] */
+      --font-ui-small: 13px; /*[cite: 6] */
+      --font-ui-medium: 15px; /*[cite: 6] */
+      --font-ui-large: 20px; /*[cite: 6] */
+      
+      --font-weight-normal: 400; /*[cite: 6] */
+      --font-weight-semibold: 600; /*[cite: 6] */
+      --font-weight-bold: 700; /*[cite: 6] */
+      --font-weight-black: 900; /*[cite: 6] */
+    }
+
+    body {
+      font-family: var(--font-interface-theme); /*[cite: 6] */
+      background-color: var(--background-primary); /*[cite: 6] */
+      color: var(--text-normal); /*[cite: 6] */
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Tokenized Glassmorphism Panel Implementations */
+    .glass-panel-card {
+      background: rgba(var(--mono-rgb-100), 0.03); /*[cite: 6] */
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--background-modifier-border); /*[cite: 6] */
+      border-radius: var(--size-4-6); /*[cite: 6] */
+      padding: var(--size-4-6); /*[cite: 6] */
+      box-shadow: 0 12px 32px rgba(var(--mono-rgb-0), 0.3); /*[cite: 6] */
+    }
+
+    .glass-panel-metric {
+      background: rgba(var(--mono-rgb-100), 0.02); /*[cite: 6] */
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(var(--mono-rgb-100), 0.04); /*[cite: 6] */
+      border-radius: var(--size-4-4); /*[cite: 6] */
+      padding: var(--size-4-4); /*[cite: 6] */
+      box-shadow: 0 8px 25px rgba(var(--mono-rgb-0), 0.15); /*[cite: 6] */
+    }
+  </style>
+</head>
+<body class="min-h-screen w-full flex flex-col justify-between items-center p-4 select-none antialiased">
+
+  <!-- Main Mobile Shell Container -->
+  <main class="w-full max-w-md flex flex-col gap-4 mt-2 mb-4">
+    
+    <!-- Top Bar Header -->
+    <header class="px-1 flex justify-between items-center">
+      <div>
+        <p class="uppercase tracking-wider text-zinc-500" style="font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold);">Good Afternoon</p>
+        <h1 class="tracking-tight text-white mt-0.5" style="font-size: var(--font-ui-large); font-weight: var(--font-weight-black);">Ziad Khaled Mohamed</h1>
+      </div>
+    </header>
+
+    <!-- Unified Glassmorphism Clock Panel -->
+    <section class="relative glass-panel-card text-center overflow-hidden">
+      <div class="absolute -top-12 -right-12 w-28 h-28 rounded-full blur-2xl" style="background-color: rgba(var(--color-cyan-rgb), 0.08);"></div>
+      <p class="tracking-tight text-white" id="live-time" style="font-size: calc(var(--font-ui-large) * 1.8); font-weight: var(--font-weight-black);">02:34 PM</p>
+      <p class="tracking-widest uppercase mt-2.5 opacity-90" id="live-date" style="color: var(--text-success); font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold);">Friday, May 1, 2026</p>
+    </section>
+
+    <!-- State Metrics Component Grid -->
+    <section class="grid grid-cols-2 gap-4">
+      <!-- Dynamic Session Status Card -->
+      <div class="glass-panel-metric flex flex-col justify-between" id="card-status" style="min-height: 110px;">
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full" id="status-dot" style="background-color: var(--text-warning);"></span>
+            <span class="uppercase tracking-widest" style="color: var(--text-muted); font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold);">Session Status</span>
+          </div>
+          <p class="text-white mt-1" id="status-text" style="font-size: var(--font-ui-large); font-weight: var(--font-weight-black);">Idle</p>
+        </div>
+        
+        <!-- Premium Live Running Session Timer -->
+        <div id="session-timer-container" class="hidden mt-2 pt-2 flex-col" style="border-top: 1px solid var(--background-modifier-border);">
+          <span class="uppercase tracking-wider" style="color: var(--text-success); font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold);">Session Time</span>
+          <span class="font-mono tracking-tight" id="session-timer" style="color: var(--text-success); font-size: var(--font-ui-medium); font-weight: var(--font-weight-black);">00:00:00</span>
+        </div>
+      </div>
+
+      <!-- Cumulative Analytics Aggregator -->
+      <div class="glass-panel-metric flex flex-col justify-between" style="min-height: 110px;">
+        <div>
+          <span class="uppercase tracking-widest" style="color: var(--text-muted); font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold);">Today's Sessions</span>
+          <p class="text-white mt-0.5" id="session-count" style="font-size: var(--font-ui-large); font-weight: var(--font-weight-black);">0</p>
+        </div>
+        <div class="pt-2 font-bold" style="border-top: 1px solid var(--background-modifier-border); font-size: var(--font-ui-smaller); color: var(--base-70);">
+          Total shift: <span id="total-hours" style="color: var(--text-success); font-weight: var(--font-weight-black);">00:00</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Button UI Engine -->
+    <section class="flex flex-col gap-3 mt-1">
+      <!-- Check In Button -->
+      <button id="btn-checkin" class="w-full text-white flex justify-between items-center group relative overflow-hidden active:scale-[0.98] transition-all" 
+              style="background-color: var(--interactive-accent); border-radius: var(--size-4-4); padding: var(--size-4-4); box-shadow: 0 8px 25px rgba(var(--accent-h), var(--accent-s), var(--accent-l), 0.15);">
+        <div class="text-left z-10 pr-2">
+          <p class="tracking-wide" style="font-size: var(--font-ui-medium); font-weight: var(--font-weight-black);">Check In</p>
+          <p class="opacity-90 mt-0.5" style="font-size: var(--font-ui-smaller); font-weight: var(--font-weight-semibold); color: var(--text-on-accent);">Initialize live tracking workflow</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center z-10 flex-shrink-0 group-hover:translate-x-0.5 transition-transform">
+          <svg class="w-5 h-5 stroke-current fill-none" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </div>
+      </button>
+
+      <!-- Check Out Button -->
+      <button id="btn-checkout" disabled class="w-full flex justify-between items-center transition-all opacity-40 cursor-not-allowed"
+              style="background-color: var(--background-secondary-alt); border: 1px solid var(--background-modifier-border); border-radius: var(--size-4-4); padding: var(--size-4-4);">
+        <div class="text-left pr-2">
+          <p class="tracking-wide" style="color: var(--text-faint); font-size: var(--font-ui-medium); font-weight: var(--font-weight-black);">Check Out</p>
+          <p class="mt-0.5" id="checkout-desc" style="color: var(--text-faint); font-size: var(--font-ui-smaller); font-weight: var(--font-weight-semibold);">Awaiting active session</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-white/[0.02] flex items-center justify-center flex-shrink-0" style="border: 1px solid var(--background-modifier-border);">
+          <svg class="w-5 h-5 stroke-current fill-none" style="color: var(--text-faint);" stroke-width="2.5" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="4"></rect></svg>
+        </div>
+      </button>
+    </section>
+  </main>
+
+  <!-- Checkout Reason Bottom-Sheet Modal -->
+  <div id="modal-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex items-end justify-center px-4">
+    <div id="modal-content" class="w-full max-w-md rounded-t-[2rem] p-6 pb-8 shadow-[0_-15px_40px_rgba(0,0,0,0.3)] translate-y-full transition-transform duration-300 max-h-[90vh] overflow-y-auto"
+         style="background-color: rgba(var(--mono-rgb-0), 0.95); border: 1px solid var(--background-modifier-border);">
+      
+      <!-- Decorative Drag Handle Bar -->
+      <div class="w-12 h-1 rounded-full mx-auto mb-5" style="background-color: var(--base-30);"></div>
+      
+      <h3 class="text-white tracking-tight text-center" style="font-size: var(--font-ui-large); font-weight: var(--font-weight-black);">End Current Active Session</h3>
+      <p class="text-center mt-1" style="color: var(--text-muted); font-size: var(--font-ui-smaller); font-weight: var(--font-weight-semibold);">Specify a checkout reason or type your own below.</p>
+      
+      <!-- Interactive Reason Tags Grid Layout -->
+      <div class="grid grid-cols-2 gap-2.5 my-5">
+        <button class="reason-tag p-3 rounded-xl transition-all text-center active:scale-95" style="font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold); background-color: var(--background-primary-alt); border: 1px solid var(--background-modifier-border); color: var(--text-normal);">Shift Completed</button>
+        <button class="reason-tag p-3 rounded-xl transition-all text-center active:scale-95" style="font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold); background-color: var(--background-primary-alt); border: 1px solid var(--background-modifier-border); color: var(--text-normal);">Lunch/Rest Break</button>
+        <button class="reason-tag p-3 rounded-xl transition-all text-center active:scale-95" style="font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold); background-color: var(--background-primary-alt); border: 1px solid var(--background-modifier-border); color: var(--text-normal);">External Meeting</button>
+        <button class="reason-tag p-3 rounded-xl transition-all text-center active:scale-95" style="font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold); background-color: var(--background-primary-alt); border: 1px solid var(--background-modifier-border); color: var(--text-normal);">Off-site Duty</button>
+      </div>
+
+      <!-- Custom Reason Text Input Area -->
+      <div class="w-full mb-6">
+        <label for="custom-reason" class="block uppercase tracking-wider mb-2" style="color: var(--text-muted); font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold);">Or write your own reason:</label>
+        <input type="text" id="custom-reason" placeholder="Type your custom checkout reason here..." 
+               class="w-full px-4 py-3 transition-all focus:outline-none focus:ring-1 focus:ring-zinc-600 focus:text-white"
+               style="background-color: var(--background-modifier-form-field); border: 1px solid var(--background-modifier-border); border-radius: var(--size-4-3); font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold); color: var(--text-normal);">
+      </div>
+
+      <!-- Action Footer Split Structure -->
+      <div class="flex gap-3">
+        <button id="modal-skip-btn" class="flex-1 text-white py-3.5 rounded-xl transition-all active:scale-98" style="background-color: var(--background-secondary-alt); border: 1px solid var(--background-modifier-border); font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold);">Skip & Finish</button>
+        <button id="modal-submit-btn" class="flex-1 text-white py-3.5 rounded-xl transition-all active:scale-98 shadow-sm" style="background-color: var(--interactive-accent); font-size: var(--font-ui-smaller); font-weight: var(--font-weight-bold);">Submit Reason</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic Controller -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const checkInBtn = document.getElementById('btn-checkin');
+      const checkOutBtn = document.getElementById('btn-checkout');
+      const checkoutDesc = document.getElementById('checkout-desc');
+      const statusDot = document.getElementById('status-dot');
+      const statusText = document.getElementById('status-text');
+      const sessionCount = document.getElementById('session-count');
+      const totalHoursDisplay = document.getElementById('total-hours');
+      const liveTime = document.getElementById('live-time');
+      const liveDate = document.getElementById('live-date');
+      
+      const sessionTimerContainer = document.getElementById('session-timer-container');
+      const sessionTimerDisplay = document.getElementById('session-timer');
+      
+      const modalOverlay = document.getElementById('modal-overlay');
+      const modalContent = document.getElementById('modal-content');
+      const reasonTags = document.querySelectorAll('.reason-tag');
+      const customReasonInput = document.getElementById('custom-reason');
+      const modalSkipBtn = document.getElementById('modal-skip-btn');
+      const modalSubmitBtn = document.getElementById('modal-submit-btn');
+
+      let globalTimerInterval = null;
+      let cumulativeSeconds = 0;
+      let currentSessionSeconds = 0;
+      let activeSessionsCounter = 0;
+      let selectedReasonValue = "";
+
+      // Fetch root style configurations safely
+      const rootStyles = getComputedStyle(document.documentElement);
+      const colorRed = rootStyles.getPropertyValue('--color-red').trim();
+      const colorCyan = rootStyles.getPropertyValue('--color-cyan').trim();
+      const colorYellow = rootStyles.getPropertyValue('--color-yellow').trim();
+      const borderNormal = rootStyles.getPropertyValue('--background-modifier-border').trim();
+      const borderHover = rootStyles.getPropertyValue('--background-modifier-border-hover').trim();
+
+      // Realtime Ambient Clock Update
+      function updateClock() {
+        const d = new Date();
+        liveTime.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        liveDate.textContent = d.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      }
+      setInterval(updateClock, 1000);
+      updateClock();
+
+      function formatHMS(totalSecs) {
+        const h = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
+        const m = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
+        const s = String(totalSecs % 60).padStart(2, '0');
+        return `${h}:${m}:${s}`;
+      }
+
+      function formatHM(totalSecs) {
+        const h = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
+        const m = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
+        return `${h}:${m}`;
+      }
+
+      // Check In System Operation
+      checkInBtn.addEventListener('click', () => {
+        checkInBtn.disabled = true;
+        checkInBtn.classList.add('opacity-40', 'cursor-not-allowed', 'scale-100');
+        checkInBtn.classList.remove('active:scale-[0.98]');
+
+        checkOutBtn.disabled = false;
+        checkOutBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+        checkOutBtn.classList.add('active:scale-[0.98]');
+        checkOutBtn.style.backgroundColor = 'rgba(var(--color-red-rgb), 0.1)';
+        checkOutBtn.style.borderColor = 'rgba(var(--color-red-rgb), 0.3)';
+        
+        const checkoutTitle = checkOutBtn.querySelector('p:first-child');
+        if (checkoutTitle) checkoutTitle.style.color = colorRed;
+        
+        checkoutDesc.textContent = "Click to finish this tracking wave";
+        checkoutDesc.style.color = 'rgba(var(--color-red-rgb), 0.8)';
+
+        // Set static color point and remove all pulse animation classes
+        statusDot.style.backgroundColor = colorCyan;
+        statusDot.className = "w-2 h-2 rounded-full"; 
+        
+        statusText.textContent = "Active";
+        statusText.style.color = colorCyan;
+        
+        sessionTimerContainer.classList.remove('hidden');
+        sessionTimerContainer.classList.add('flex');
+
+        currentSessionSeconds = 0;
+        sessionTimerDisplay.textContent = formatHMS(currentSessionSeconds);
+
+        globalTimerInterval = setInterval(() => {
+          currentSessionSeconds++;
+          cumulativeSeconds++;
+          sessionTimerDisplay.textContent = formatHMS(currentSessionSeconds);
+          totalHoursDisplay.textContent = formatHM(cumulativeSeconds);
+        }, 1000);
+      });
+
+      // Checkout Trigger Mechanics
+      checkOutBtn.addEventListener('click', () => {
+        modalOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        modalContent.classList.remove('translate-y-full');
+      });
+
+      function closeModal() {
+        modalOverlay.classList.add('opacity-0', 'pointer-events-none');
+        modalContent.classList.add('translate-y-full');
+        reasonTags.forEach(tag => {
+          tag.style.color = 'var(--text-normal)';
+          tag.style.borderColor = borderNormal;
+          tag.style.backgroundColor = 'var(--background-primary-alt)';
+        });
+        customReasonInput.value = "";
+        selectedReasonValue = "";
+      }
+
+      // Dynamic Interactive Selector Engine
+      reasonTags.forEach(tag => {
+        tag.addEventListener('click', () => {
+          reasonTags.forEach(t => {
+            t.style.color = 'var(--text-normal)';
+            t.style.borderColor = borderNormal;
+            t.style.backgroundColor = 'var(--background-primary-alt)';
+          });
+          tag.style.color = 'var(--text-accent)';
+          tag.style.borderColor = borderHover;
+          tag.style.backgroundColor = 'rgba(var(--mono-rgb-100), 0.05)';
+          selectedReasonValue = tag.textContent;
+        });
+      });
+
+      // Clear selections gracefully when writing custom reason
+      customReasonInput.addEventListener('input', () => {
+        if(customReasonInput.value.trim() !== "") {
+          reasonTags.forEach(t => {
+            t.style.color = 'var(--text-normal)';
+            t.style.borderColor = borderNormal;
+            t.style.backgroundColor = 'var(--background-primary-alt)';
+          });
+          selectedReasonValue = customReasonInput.value.trim();
+        }
+      });
+
+      function finalizeCheckOutState() {
+        clearInterval(globalTimerInterval);
+        activeSessionsCounter++;
+        sessionCount.textContent = activeSessionsCounter;
+
+        checkInBtn.disabled = false;
+        checkInBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+        checkInBtn.classList.add('active:scale-[0.98]');
+
+        checkOutBtn.disabled = true;
+        checkOutBtn.classList.add('opacity-40', 'cursor-not-allowed');
+        checkOutBtn.classList.remove('active:scale-[0.98]');
+        checkOutBtn.style.backgroundColor = 'var(--background-secondary-alt)';
+        checkOutBtn.style.borderColor = borderNormal;
+        
+        const checkoutTitle = checkOutBtn.querySelector('p:first-child');
+        if (checkoutTitle) checkoutTitle.style.color = 'var(--text-faint)';
+        
+        checkoutDesc.textContent = "Awaiting active session";
+        checkoutDesc.style.color = 'var(--text-faint)';
+
+        statusDot.style.backgroundColor = colorYellow;
+        statusDot.className = "w-2 h-2 rounded-full animate-pulse";
+        statusText.textContent = "Idle";
+        statusText.style.color = '#ffffff';
+
+        sessionTimerContainer.classList.remove('flex');
+        sessionTimerContainer.classList.add('hidden');
+
+        closeModal();
+      }
+
+      modalSkipBtn.addEventListener('click', () => {
+        selectedReasonValue = "Skipped";
+        finalizeCheckOutState();
+      });
+      
+      modalSubmitBtn.addEventListener('click', finalizeCheckOutState);
+      
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) closeModal();
+      });
+    });
+  </script>
+</body>
+</html>

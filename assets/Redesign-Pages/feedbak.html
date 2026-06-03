@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Feedbacks — Obsidian Dark Mode</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #1e1e1e; /* --base-00: Obsidian deepest background layer */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Obsidian Input & Chip Layer Specifications */
+        .obsidian-field {
+            background: rgba(36, 36, 36, 0.7); /* --base-10: Elevated component layer */
+            border: 1px solid rgba(54, 54, 54, 0.6); /* --base-30: Structural layout borders */
+            color: #dadada; /* --text-normal: Crisp primary text element */
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .obsidian-field:focus {
+            background: rgba(30, 30, 30, 0.9);
+            border-color: #a882ff; /* --color-purple: Obsidian functional active brand token */
+            box-shadow: 0 0 0 3px rgba(168, 130, 255, 0.15);
+            outline: none;
+        }
+
+        /* Active Type Choice Highlight State */
+        .chip-active {
+            background: rgba(168, 130, 255, 0.12); /* Unified Purple Alpha Layer */
+            border-color: #a882ff !important;
+            color: #a882ff !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen w-full flex justify-center items-center p-4 sm:p-6 text-[#dadada]">
+
+    <!-- Content Screen Canvas Wrapper mapping Blueprint from Screenshot 2026-06-03 175531.png -->
+    <div class="w-full max-w-md flex flex-col relative z-10 min-h-[850px] sm:min-h-0 justify-between py-4">
+        
+        <div>
+            <!-- Navigation & Top Header Axis Layout -->
+            <div class="flex items-center justify-between w-full mb-8 relative">
+                <!-- Back Action Circle Button Box -->
+                <button onclick="window.history.back()" class="w-11 h-11 rounded-xl bg-[#242424] border border-[#363636]/60 flex items-center justify-center text-[#dadada] hover:text-[#a882ff] active:scale-95 transition-all cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                </button>
+                
+                <!-- Center Title Spec -->
+                <h1 class="text-[17px] font-bold text-[#dadada] tracking-wide absolute left-1/2 -translate-x-1/2">Feedbacks</h1>
+                
+                <!-- Right Placeholder balance space spacer anchor link -->
+                <div class="w-11 invisible"></div>
+            </div>
+
+            <!-- Decorative Central Graphic Illumination Vector Container -->
+            <div class="w-full flex justify-center mb-6">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-b from-[#242424] to-[#1e1e1e] border border-[#363636]/60 flex items-center justify-center text-[#a882ff] shadow-xl relative">
+                    <!-- Glow Aura ring behind target mesh -->
+                    <div class="absolute inset-0 rounded-full bg-[#a882ff]/5 blur-md"></div>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-9 h-9 relative z-10">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Editorial Header Text Structure Layout -->
+            <div class="text-center px-4 mb-8">
+                <h2 class="text-[26px] font-bold tracking-tight text-[#dadada] mb-3">We Value Your Feedback</h2>
+                <p class="text-[14px] text-[#999999] leading-relaxed max-w-sm mx-auto font-normal">
+                    Help us improve Attenary by sharing your thoughts, suggestions, or reporting issues.
+                </p>
+            </div>
+
+            <!-- Form Processing Matrix Shell Block -->
+            <form id="feedbackForm" onsubmit="handleFormSubmission(event)" class="flex flex-col gap-5">
+                
+                <!-- Group Entry Segment 1: Feedback Classification Type Selection Component -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-[13px] font-semibold text-[#888888] uppercase tracking-wider pl-1">Feedback Type</label>
+                    <div class="grid grid-cols-3 gap-2.5">
+                        <button type="button" id="chip-general" onclick="selectType('general')" class="obsidian-field chip-active py-3 px-2 rounded-xl text-[13px] font-bold text-center cursor-pointer hover:bg-[#2e2e2e] transition-all">
+                            General
+                        </button>
+                        <button type="button" id="chip-bug" onclick="selectType('bug')" class="obsidian-field py-3 px-2 rounded-xl text-[13px] font-bold text-center cursor-pointer hover:bg-[#2e2e2e] transition-all">
+                            Bug Report
+                        </button>
+                        <button type="button" id="chip-feature" onclick="selectType('feature')" class="obsidian-field py-3 px-2 rounded-xl text-[13px] font-bold text-center cursor-pointer hover:bg-[#2e2e2e] transition-all">
+                            Feature Request
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Group Entry Segment 2: User Communication Channel (Email Field) -->
+                <div class="flex flex-col gap-2">
+                    <label for="email" class="text-[13px] font-semibold text-[#888888] uppercase tracking-wider pl-1">Email</label>
+                    <input type="email" id="email" required placeholder="your@email.com" class="w-full obsidian-field px-4 py-3.5 rounded-xl text-[14px] placeholder-[#555555]">
+                </div>
+
+                <!-- Group Entry Segment 3: User Narrative Payload Content Input Block (Textarea) -->
+                <div class="flex flex-col gap-2">
+                    <label for="feedback" class="text-[13px] font-semibold text-[#888888] uppercase tracking-wider pl-1">Your Feedback</label>
+                    <textarea id="feedback" required rows="5" placeholder="Tell us what you think..." class="w-full obsidian-field px-4 py-3.5 rounded-xl text-[14px] placeholder-[#555555] resize-none"></textarea>
+                </div>
+
+                <!-- Submission Component Trigger Anchor Button mapping Obsidian Active Solid Palette -->
+                <button type="submit" class="w-full py-4 bg-[#a882ff] hover:opacity-95 active:scale-[0.99] text-[#1e1e1e] text-[15px] font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2.5 transition-all cursor-pointer mt-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4.5 h-4.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                    </svg>
+                    <span>Submit Feedback</span>
+                </button>
+                
+            </form>
+        </div>
+
+        <!-- Privacy Assurance Information Line matching layout base from Screenshot 2026-06-03 175531.png -->
+        <p class="text-[12px] text-[#666666] text-center max-w-xs mx-auto leading-normal font-medium mt-6 sm:mt-12">
+            Your feedback helps us make Attenary better for everyone. We read every submission and appreciate your time.
+        </p>
+
+    </div>
+
+    <!-- Micro-interaction Controller Script Layer -->
+    <script>
+        let selectedCategoryType = 'general';
+
+        function selectType(chosenCategory) {
+            selectedCategoryType = chosenCategory;
+            
+            // Clear current active styling matrices across types
+            document.getElementById('chip-general').classList.remove('chip-active');
+            document.getElementById('chip-bug').classList.remove('chip-active');
+            document.getElementById('chip-feature').classList.remove('chip-active');
+            
+            // Assign active class tokens strictly to target context node
+            document.getElementById(`chip-${chosenCategory}`).classList.add('chip-active');
+            console.log(`Updated form metadata context selection category: ${chosenCategory}`);
+        }
+
+        function handleFormSubmission(event) {
+            event.preventDefault();
+            
+            const clientEmail = document.getElementById('email').value;
+            const messageBody = document.getElementById('feedback').value;
+            
+            console.log('Dispatching feedback transaction packet metadata to native server container:', {
+                type: selectedCategoryType,
+                sender: clientEmail,
+                content: messageBody
+            });
+
+            alert('Thank you for your valuable feedback! Processing submission...');
+            document.getElementById('feedbackForm').reset();
+            selectType('general');
+        }
+    </script>
+</body>
+</html>

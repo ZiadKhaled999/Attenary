@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>History - Session Records</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Obsidian Dark Theme Color Token Mapping
+                        'bg-main': '#1e1e1e',              // --base-00: Deepest background
+                        'surface-card': '#242424',         // --base-10: Elevated surface background
+                        'surface-alt': '#262626',          // --base-20: Secondary background
+                        'border-main': '#363636',          // --base-30: Core border lines
+                        'border-subtle': '#2a2a2a',        // --base-25: Micro dividers & subtle borders
+                        'text-main': '#dadada',            // --base-100: Main accessible body text
+                        'text-muted': '#999999',           // --base-60: Clear secondary label text
+                        'text-faint': '#666666',           // --base-50: Muted metadata descriptions
+                        
+                        // Functional Accent Scale (Using Obsidian Purple)
+                        'accent-purple': '#a882ff',        // --color-purple: Core brand interactive accent
+                        'status-red': '#fb464c',           // --color-red: Active/Error state
+                        'status-green': '#44cf6e',         // --color-green: Complete/Success state
+                    },
+                    boxShadow: {
+                        'glass-sm': '0 2px 8px rgba(0, 0, 0, 0.4)',
+                    },
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer components {
+            .session-card {
+                @apply bg-surface-card rounded-2xl p-5 border border-border-main shadow-glass-sm transition-all duration-150 cursor-pointer active:scale-[0.99] flex flex-col gap-4;
+            }
+            .inner-search {
+                @apply bg-surface-card rounded-xl border border-border-main focus-within:border-accent-purple transition-all duration-200;
+            }
+            .drawer-pill {
+                @apply px-4 py-2 bg-surface-alt rounded-xl text-xs font-bold border border-border-subtle text-text-muted transition-all whitespace-nowrap;
+            }
+            .drawer-pill-active-purple {
+                @apply bg-accent-purple/10 text-accent-purple border-accent-purple/30;
+            }
+            .drawer-pill-active-green {
+                @apply bg-status-green/10 text-status-green border-status-green/30;
+            }
+            .drawer-pill-active-red {
+                @apply bg-status-red/10 text-status-red border-status-red/30;
+            }
+        }
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-bg-main text-text-main font-sans antialiased min-h-screen relative overflow-x-hidden">
+
+    <div class="min-h-screen p-4 max-w-sm md:max-w-md mx-auto space-y-4">
+
+        <header class="pt-2 pb-1">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">History</h1>
+                <p class="text-xs text-text-muted font-medium mt-0.5">Your session records</p>
+            </div>
+        </header>
+
+        <div class="sticky top-0 z-30 bg-bg-main pt-2 pb-3 flex items-center gap-2.5">
+            <div class="inner-search flex-1 flex items-center px-4 py-3 gap-3">
+                <svg class="w-4 h-4 text-text-muted stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Search by details..." class="bg-transparent w-full focus:outline-none text-sm font-bold placeholder-text-faint text-accent-purple" onkeyup="filterSessions()">
+            </div>
+            
+            <button onclick="toggleFilterSheet(true)" class="w-11 h-11 shrink-0 rounded-xl bg-surface-card border border-border-main flex items-center justify-center text-accent-purple hover:text-white transition-colors active:scale-95">
+                <svg class="w-4 h-4 stroke-[2.2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="flex items-center justify-between px-1 text-[10px] font-bold text-text-faint tracking-wider uppercase">
+            <span id="counter-label">Showing 3 of 3 sessions</span>
+            <span class="text-text-muted font-medium">Timeline Feed</span>
+        </div>
+
+        <div class="space-y-3.5 pb-8" id="sessionsContainer">
+            
+            <div class="session-card" data-status="live" data-year="2026" data-month="Jun" data-day="1" onclick="navigateToSession('session_003')">
+                <div class="flex items-start justify-between">
+                    <div class="space-y-0.5">
+                        <h3 class="text-sm font-bold text-white">Today, Jun 1</h3>
+                        <p class="text-[10px] font-mono text-text-muted tracking-wider">Session Record #003 — 2026</p>
+                    </div>
+                    <div class="w-7 h-7 rounded-full bg-surface-alt border border-border-subtle flex items-center justify-center text-text-muted">
+                        <svg class="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 text-center bg-surface-alt/40 py-2.5 rounded-xl border border-border-subtle/30">
+                    <div>
+                        <p class="text-[9px] uppercase tracking-wider font-semibold text-text-faint">Check In</p>
+                        <p class="text-xs font-bold text-white font-mono mt-0.5">09:00 AM</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] uppercase tracking-wider font-semibold text-text-faint">Check Out</p>
+                        <p class="text-xs font-medium text-text-muted italic mt-0.5">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] uppercase tracking-wider font-semibold text-text-faint">Status</p>
+                        <span class="inline-flex items-center gap-1 justify-center text-[10px] font-bold text-status-red mt-1">
+                            <span class="w-1 h-1 rounded-full bg-status-red"></span>Active Session
+                        </span>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-[10px] font-bold tracking-tight text-text-muted">
+                        <span class="uppercase text-text-faint text-[9px] tracking-wider">Accumulated Duration</span>
+                        <span class="font-mono text-status-red text-xs">02 : 14 : 05</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-surface-alt rounded-full overflow-hidden p-[1px] border border-border-subtle/50">
+                        <div class="h-full bg-status-red rounded-full opacity-90" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="session-card" data-status="completed" data-year="2026" data-month="Apr" data-day="26" onclick="navigateToSession('session_002')">
+                <div class="flex items-start justify-between">
+                    <div class="space-y-0.5">
+                        <h3 class="text-sm font-bold text-white">Sun, Apr 26</h3>
+                        <p class="text-[10px] font-mono text-text-muted tracking-wider">Session Record #002 — 2026</p>
+                    </div>
+                    <div class="w-7 h-7 rounded-full bg-surface-alt border border-border-subtle flex items-center justify-center text-text-muted">
+                        <svg class="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 text-center bg-surface-alt/40 py-2.5 rounded-xl border border-border-subtle/30">
+                    <div>
+                        <p class="text-[9px] uppercase tracking-wider font-semibold text-text-faint">Check In</p>
+                        <p class="text-xs font-bold text-white font-mono mt-0.5">12:43 AM</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] uppercase tracking-wider font-semibold text-text-faint">Check Out</p>
+                        <p class="text-xs font-bold text-white font-mono mt-0.5">12:44 AM</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] uppercase tracking-wider font-semibold text-text-faint">Status</p>
+                        <p class="text-xs font-bold text-status-green mt-0.5">Completed</p>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-[10px] font-bold tracking-tight text-text-muted">
+                        <span class="uppercase text-text-faint text-[9px] tracking-wider">Duration</span>
+                        <span class="font-mono text-white text-xs">00 : 01 : 00</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-surface-alt rounded-full overflow-hidden p-[1px] border border-border-subtle/50">
+                        <div class="h-full bg-status-green rounded-full" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="session-card" data-status="completed" data-year="2025" data-month="Dec" data-day="15" onclick="navigateToSession('session_001')">
+                <div class="flex items-start justify-between">
+                    <div class="space-y-0.5">
+                        <h3 class="text-sm font-bold text-white">Mon, Dec 15</h3>
+                        <p class="text-[10px] font-mono text-text-muted tracking-wider">Session Record #001 — 2025</p>
+                    </div>
+                    <div class="w-7 h-7 rounded-full bg-surface-alt border border-border-subtle flex items-center justify-center text-text-muted">
+                        <svg class="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 text-center bg-surface-alt/40 py-2.5 rounded-xl border border-border-subtle/30">
+                    <div>
+                        <p class="text-[9px] uppercase tracking-wider font-semibold text-text-faint">Check In</p>
+                        <p class="text-xs font-bold text-white font-mono mt-0.5">10:15 PM</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] uppercase tracking-wider font-semibold text-text-faint">Check Out</p>
+                        <p class="text-xs font-bold text-white font-mono mt-0.5">11:30 PM</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] uppercase tracking-wider font-semibold text-text-faint">Status</p>
+                        <p class="text-xs font-bold text-status-green mt-0.5">Completed</p>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-[10px] font-bold tracking-tight text-text-muted">
+                        <span class="uppercase text-text-faint text-[9px] tracking-wider">Duration</span>
+                        <span class="font-mono text-white text-xs">01 : 15 : 00</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-surface-alt rounded-full overflow-hidden p-[1px] border border-border-subtle/50">
+                        <div class="h-full bg-status-green rounded-full" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="filterSheet" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 transition-opacity duration-300 opacity-0 pointer-events-none" onclick="toggleFilterSheet(false)">
+        <div class="absolute bottom-0 left-0 right-0 max-w-md mx-auto bg-bg-main border-t border-border-main rounded-t-[2.5rem] p-6 space-y-5 transform translate-y-full transition-transform duration-300" onclick="event.stopPropagation()">
+            
+            <div class="w-12 h-1 bg-border-main rounded-full mx-auto -mt-2 mb-2"></div>
+
+            <div class="flex items-center justify-between">
+                <h4 class="text-base font-bold text-white tracking-tight">Set Filter Constraints</h4>
+                <button onclick="resetFilters()" class="text-xs font-bold text-text-faint hover:text-white transition-colors">Reset All</button>
+            </div>
+
+            <div class="space-y-4 pt-2">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-text-faint">Select Timeline Year</label>
+                    <div class="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+                        <button onclick="selectMetric('year', '2026')" id="f-year-2026" class="drawer-pill">2026</button>
+                        <button onclick="selectMetric('year', '2025')" id="f-year-2025" class="drawer-pill">2025</button>
+                        <button onclick="selectMetric('year', '2024')" id="f-year-2024" class="drawer-pill">2024</button>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-text-faint">Select Month Parameters</label>
+                    <div class="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+                        <button onclick="selectMetric('month', 'Jan')" id="f-month-Jan" class="drawer-pill">Jan</button>
+                        <button onclick="selectMetric('month', 'Feb')" id="f-month-Feb" class="drawer-pill">Feb</button>
+                        <button onclick="selectMetric('month', 'Mar')" id="f-month-Mar" class="drawer-pill">Mar</button>
+                        <button onclick="selectMetric('month', 'Apr')" id="f-month-Apr" class="drawer-pill">Apr</button>
+                        <button onclick="selectMetric('month', 'May')" id="f-month-May" class="drawer-pill">May</button>
+                        <button onclick="selectMetric('month', 'Jun')" id="f-month-Jun" class="drawer-pill">Jun</button>
+                        <button onclick="selectMetric('month', 'Jul')" id="f-month-Jul" class="drawer-pill">Jul</button>
+                        <button onclick="selectMetric('month', 'Aug')" id="f-month-Aug" class="drawer-pill">Aug</button>
+                        <button onclick="selectMetric('month', 'Sep')" id="f-month-Sep" class="drawer-pill">Sep</button>
+                        <button onclick="selectMetric('month', 'Oct')" id="f-month-Oct" class="drawer-pill">Oct</button>
+                        <button onclick="selectMetric('month', 'Nov')" id="f-month-Nov" class="drawer-pill">Nov</button>
+                        <button onclick="selectMetric('month', 'Dec')" id="f-month-Dec" class="drawer-pill">Dec</button>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-text-faint">Target Specific Day</label>
+                    <div class="bg-surface-alt rounded-xl border border-border-subtle focus-within:border-accent-purple p-2.5 max-w-[120px]">
+                        <input type="number" id="f-day-input" min="1" max="31" placeholder="e.g. 26" class="w-full bg-transparent text-sm font-mono font-bold focus:outline-none placeholder-text-faint text-white text-center">
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-text-faint">State Filtering</label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button onclick="selectMetric('status', 'live')" id="f-status-live" class="drawer-pill flex items-center justify-center gap-2 py-3">
+                            <span class="w-1.5 h-1.5 rounded-full bg-status-red"></span> Active Sessions
+                        </button>
+                        <button onclick="selectMetric('status', 'completed')" id="f-status-completed" class="drawer-pill flex items-center justify-center gap-2 py-3">
+                            <span class="w-1.5 h-1.5 rounded-full bg-status-green"></span> Completed Tasks
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="toggleFilterSheet(false)" class="w-full py-3.5 bg-accent-purple text-bg-main text-sm font-black rounded-xl active:scale-[0.98] transition-transform shadow-lg mt-2">
+                Apply Timeline Filters
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let filters = { year: null, month: null, status: null };
+
+        function toggleFilterSheet(open) {
+            const wrapper = document.getElementById('filterSheet');
+            const sheet = wrapper.firstElementChild;
+            if (open) {
+                wrapper.classList.remove('opacity-0', 'pointer-events-none');
+                sheet.classList.remove('translate-y-full');
+            } else {
+                wrapper.classList.add('opacity-0', 'pointer-events-none');
+                sheet.classList.add('translate-y-full');
+                filterSessions();
+            }
+        }
+
+        function selectMetric(category, value) {
+            const currentSelected = filters[category];
+            
+            if (currentSelected === value) {
+                filters[category] = null;
+                deactivateVisualPill(category, value);
+            } else {
+                if (currentSelected) {
+                    deactivateVisualPill(category, currentSelected);
+                }
+                filters[category] = value;
+                activateVisualPill(category, value);
+            }
+        }
+
+        function activateVisualPill(category, value) {
+            const targetElement = document.getElementById(`f-${category}-${value}`);
+            if (!targetElement) return;
+            
+            if (category === 'status') {
+                if (value === 'live') targetElement.classList.add('drawer-pill-active-red');
+                if (value === 'completed') targetElement.classList.add('drawer-pill-active-green');
+            } else {
+                targetElement.classList.add('drawer-pill-active-purple');
+            }
+        }
+
+        function deactivateVisualPill(category, value) {
+            const targetElement = document.getElementById(`f-${category}-${value}`);
+            if (!targetElement) return;
+            
+            targetElement.classList.remove('drawer-pill-active-purple', 'drawer-pill-active-green', 'drawer-pill-active-red');
+        }
+
+        function resetFilters() {
+            Object.keys(filters).forEach(cat => {
+                if (filters[cat]) deactivateVisualPill(cat, filters[cat]);
+            });
+            filters = { year: null, month: null, status: null };
+            document.getElementById('f-day-input').value = "";
+            filterSessions();
+        }
+
+        function filterSessions() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const targetedDay = document.getElementById('f-day-input').value.trim();
+            const sessionRows = document.querySelectorAll('#sessionsContainer > div');
+            let displayedSessions = 0;
+
+            sessionRows.forEach(row => {
+                const sStatus = row.getAttribute('data-status');
+                const sYear = row.getAttribute('data-year');
+                const sMonth = row.getAttribute('data-month');
+                const sDay = row.getAttribute('data-day');
+                const sTextHeader = row.querySelector('h3') ? row.querySelector('h3').innerText.toLowerCase() : '';
+
+                let visible = sTextHeader.includes(searchQuery);
+
+                if (visible) {
+                    if (filters.year && sYear !== filters.year) visible = false;
+                    if (filters.month && sMonth !== filters.month) visible = false;
+                    if (filters.status && sStatus !== filters.status) visible = false;
+                    if (targetedDay && sDay !== targetedDay) visible = false;
+                }
+
+                if (visible) {
+                    row.classList.remove('hidden');
+                    displayedSessions++;
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('counter-label').innerText = `Showing ${displayedSessions} of ${sessionRows.length} sessions`;
+        }
+
+        function navigateToSession(sessionId) {
+            window.location.href = `session-details.html?id=${sessionId}`;
+        }
+    </script>
+</body>
+</html>

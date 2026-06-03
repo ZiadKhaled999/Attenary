@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Attenary - Performance Insights (Dark Mode)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // Base neutral scale from the design token guide (Dark Mode equivalents)[cite: 2]
+            bgDeep: '#1e1e1e',       // --base-00 (Canvas)[cite: 2]
+            bgPrimary: '#212121',    // --base-05[cite: 2]
+            bgSurface: '#242424',    // --base-10 (Elevated fields)[cite: 2]
+            bgSecondary: '#262626',  // --base-20[cite: 2]
+            borderSubtle: '#2a2a2a', // --base-25[cite: 2]
+            borderNormal: '#363636', // --base-30[cite: 2]
+            borderHover: '#3f3f3f',  // --base-35[cite: 2]
+            textDisabled: '#555555', // --base-40[cite: 2]
+            textMuted: '#666666',    // --base-50[cite: 2]
+            textSecondary: '#999999',// --base-60[cite: 2]
+            textPrimary: '#dadada',  // --base-100 (Primary Light text)[cite: 2]
+            
+            // Brand Interactive Purple Accent derived from HSL(254, 80%, 68%)[cite: 2]
+            accent: 'hsl(254, 80%, 68%)',
+            accentHover: 'hsl(254, 80%, 58%)',
+            
+            // Functional palette mapping for stats and visualization statuses[cite: 2]
+            fnRed: '#fb464c',     //[cite: 2]
+            fnOrange: '#e9973f',  //[cite: 2]
+            fnYellow: '#e0de71',  //[cite: 2]
+            fnGreen: '#44cf6e',   //[cite: 2]
+            fnBlue: '#027aff',    //[cite: 2]
+            fnPurple: '#a882ff'   //[cite: 2]
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #1e1e1e 0%, #262626 100%);
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body class="min-h-screen w-full flex flex-col items-center p-4 pb-6 select-none font-sans antialiased text-textPrimary">
+
+  <!-- Main Mobile Shell Container -->
+  <main class="w-full max-w-md flex flex-col gap-4 mt-2">
+    
+    <!-- Analytics View Dashboard -->
+    <div id="view-analytics" class="flex flex-col gap-4 w-full">
+      
+      <!-- Top Bar Header Section (No Logo Box) -->
+      <header class="px-1 py-2">
+        <h1 class="text-2xl font-black text-textPrimary tracking-tight">Analytics</h1>
+        <p class="text-xs font-bold text-textSecondary mt-0.5 tracking-wide">Your performance insights</p>
+      </header>
+
+      <!-- Segmented Timeframe Selector Tabs -->
+      <section class="bg-bgSurface/40 backdrop-blur-md border border-borderNormal p-1.5 rounded-2xl grid grid-cols-3 gap-1 text-center">
+        <button data-timeframe="week" class="time-filter py-2 text-xs font-black text-white bg-accent rounded-xl shadow-xs transition-all duration-200">Week</button>
+        <button data-timeframe="month" class="time-filter py-2 text-xs font-bold text-textSecondary hover:text-textPrimary rounded-xl transition-all duration-200">Month</button>
+        <button data-timeframe="year" class="time-filter py-2 text-xs font-bold text-textSecondary hover:text-textPrimary rounded-xl transition-all duration-200">Year</button>
+      </section>
+
+      <!-- Total Hours Hero Panel (No Logo Box) -->
+      <section class="relative bg-bgSurface/60 backdrop-blur-md border border-borderNormal rounded-3xl p-5 shadow-xs overflow-hidden flex flex-col gap-4">
+        <div class="absolute -top-12 -right-12 w-28 h-28 bg-accent/10 rounded-full blur-2xl"></div>
+        <div class="flex items-center justify-between z-10">
+          <div class="text-left">
+            <p class="text-[10px] font-bold text-textMuted uppercase tracking-widest">Total Hours</p>
+            <p id="hero-total-hours" class="text-3xl font-black text-textPrimary tracking-tight font-mono mt-0.5">38:45</p>
+          </div>
+          <div id="hero-trend-badge" class="flex items-center gap-1 bg-fnGreen/10 border border-fnGreen/20 px-2 py-1 rounded-full text-[9px] font-bold text-fnGreen self-start">
+            <svg id="hero-trend-icon" class="w-3 h-3 stroke-current fill-none" stroke-width="2.5" viewBox="0 0 24 24">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+            </svg>
+            <span id="hero-trend-text">+12%</span>
+          </div>
+        </div>
+
+        <!-- Interactive Activity Graph Profile Component -->
+        <div class="pt-3 border-t border-borderNormal z-10 flex flex-col gap-1.5 text-left">
+          <div class="flex justify-between items-center">
+            <p id="chart-title-context" class="text-[9px] font-black text-accent tracking-widest uppercase opacity-75">Weekly Shift Activity Load</p>
+            <span id="chart-interactive-reading" class="text-[9px] font-mono text-textPrimary font-bold bg-bgPrimary px-1.5 py-0.5 rounded border border-borderNormal hidden"></span>
+          </div>
+          
+          <!-- Dynamic Target Container Bars Layer -->
+          <div id="chart-bars-container" class="flex items-end justify-between gap-1.5 h-12 mt-1">
+            <!-- Dynamic Injection Engine Output Space -->
+          </div>
+          
+          <!-- Dynamic Target Labels Layer -->
+          <div id="chart-labels-container" class="flex justify-between text-[8px] font-bold text-textMuted px-0.5">
+            <!-- Dynamic Injection Labels Output Space -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 2x2 Metrics Panel Grid Layout -->
+      <section class="grid grid-cols-2 gap-3">
+        <div class="bg-bgSurface/60 backdrop-blur-md border border-borderNormal rounded-2xl p-4 flex flex-col justify-between min-h-[95px]">
+          <span class="text-[10px] font-bold text-textMuted uppercase tracking-wider truncate">Total Sessions</span>
+          <p id="metric-sessions" class="text-2xl font-black text-textPrimary mt-2">6</p>
+        </div>
+        <div class="bg-bgSurface/60 backdrop-blur-md border border-borderNormal rounded-2xl p-4 flex flex-col justify-between min-h-[95px]">
+          <span class="text-[10px] font-bold text-textMuted uppercase tracking-wider truncate">Active</span>
+          <p id="metric-active" class="text-2xl font-black text-textPrimary mt-2">1</p>
+        </div>
+        <div class="bg-bgSurface/60 backdrop-blur-md border border-borderNormal rounded-2xl p-4 flex flex-col justify-between min-h-[95px]">
+          <span class="text-[10px] font-bold text-textMuted uppercase tracking-wider truncate">Completed</span>
+          <p id="metric-completed" class="text-2xl font-black text-fnGreen mt-2">5</p>
+        </div>
+        <div class="bg-bgSurface/60 backdrop-blur-md border border-borderNormal rounded-2xl p-4 flex flex-col justify-between min-h-[95px]">
+          <span class="text-[10px] font-bold text-textMuted uppercase tracking-wider truncate">Active Days</span>
+          <p id="metric-days" class="text-2xl font-black text-fnOrange mt-2">5</p>
+        </div>
+      </section>
+
+      <!-- Average Session Insight Trigger -->
+      <section id="card-average-session" class="bg-bgSurface/60 backdrop-blur-md border border-borderNormal rounded-2xl p-4 flex flex-col justify-between shadow-xs cursor-pointer group active:scale-[0.99] transition-all hover:border-accent/30 relative">
+        <div class="absolute right-4 top-1/2 -translate-y-1/2 text-textDisabled group-hover:text-accent transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="flex justify-between items-center pr-4">
+          <h3 class="text-xs font-black text-textPrimary uppercase tracking-widest flex items-center gap-1.5">
+            Average Session <span class="text-[9px] text-accent lowercase font-medium opacity-60">(tap for details)</span>
+          </h3>
+          <span class="bg-accent/10 text-accent font-black text-[9px] px-2 py-0.5 rounded-md">Insight</span>
+        </div>
+        <p id="metric-avg-session" class="text-3xl font-black text-textPrimary font-mono tracking-tight mt-1.5">06 : 27</p>
+        <p class="text-[11px] text-textSecondary font-bold mt-1 pt-2 border-t border-borderSubtle">Based on completed sessions</p>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Interactive Analysis Bottom-Sheet System Container -->
+  <div id="analysis-modal-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex items-end justify-center px-4">
+    <div id="analysis-modal-content" class="w-full max-w-md bg-bgSurface/95 backdrop-blur-xl rounded-t-[2rem] p-6 pb-8 shadow-[0_-15px_40px_rgba(0,0,0,0.3)] translate-y-full transition-transform duration-300 border border-borderSubtle max-h-[92vh] overflow-y-auto">
+      
+      <!-- Drag Handle -->
+      <div class="w-12 h-1 bg-borderNormal rounded-full mx-auto mb-5"></div>
+      
+      <h3 class="text-lg font-black text-textPrimary tracking-tight text-center">Historical Session Average</h3>
+      <p class="text-xs font-bold text-textSecondary text-center mt-1">Tap selection chips to load deep calendar controls.</p>
+      
+      <div class="flex flex-col gap-3 my-6">
+        
+        <!-- Total Worktime Component Row -->
+        <div class="bg-bgSecondary/80 border border-borderNormal rounded-xl p-3.5 flex items-center justify-between">
+          <div>
+            <p class="text-[10px] font-black text-textMuted uppercase tracking-wider">Total Worktime (Default)</p>
+            <p class="text-xs font-bold text-accent mt-0.5">Lifetime execution values</p>
+          </div>
+          <p class="text-xl font-black text-accent font-mono">08:42:15</p>
+        </div>
+
+        <!-- Custom Year Component Row -->
+        <div class="bg-bgSecondary/80 border border-borderNormal rounded-xl p-3.5 flex flex-col gap-2 relative">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-[10px] font-black text-textMuted uppercase tracking-wider">Custom Year</p>
+              <button id="btn-cal-year" class="mt-1 flex items-center gap-1.5 px-2 py-1 rounded-md bg-bgPrimary border border-borderNormal text-[10px] font-black text-textSecondary hover:text-accent hover:border-accent transition-all">
+                <span id="txt-selected-year">Year: 2026</span>
+                <svg class="w-3 h-3 text-textMuted" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 4H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM16 2v4M8 2v4M3 10h18"/></svg>
+              </button>
+            </div>
+            <p class="text-xl font-black text-textPrimary font-mono" id="val-year-avg">07:54:00</p>
+          </div>
+          
+          <!-- Year Selector Calendar Popover -->
+          <div id="cal-popover-year" class="hidden w-full bg-bgPrimary border border-borderNormal rounded-xl p-3 shadow-md flex flex-col gap-2 mt-1">
+            <div class="text-[10px] font-black text-textMuted uppercase tracking-wider text-center border-b border-borderSubtle pb-1">Select Year Range</div>
+            <div class="grid grid-cols-3 gap-2 py-1">
+              <button class="opt-cal-year p-2 rounded-lg border text-center text-xs font-bold transition-all bg-accent text-white border-accent" data-year="2026">2026</button>
+              <button class="opt-cal-year p-2 rounded-lg border text-center text-xs font-bold transition-all border-borderNormal text-textSecondary hover:border-accent" data-year="2025">2025</button>
+              <button class="opt-cal-year p-2 rounded-lg border text-center text-xs font-bold transition-all border-borderNormal text-textSecondary hover:border-accent" data-year="2024">2024</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Month Component Row with Advanced Dynamic Year Navigation -->
+        <div class="bg-bgSecondary/80 border border-borderNormal rounded-xl p-3.5 flex flex-col gap-2 relative">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-[10px] font-black text-textMuted uppercase tracking-wider">Custom Month</p>
+              <button id="btn-cal-month" class="mt-1 flex items-center gap-1.5 px-2 py-1 rounded-md bg-bgPrimary border border-borderNormal text-[10px] font-black text-textSecondary hover:text-accent hover:border-accent transition-all">
+                <span id="txt-selected-month">Month: June 2026</span>
+                <svg class="w-3 h-3 text-textMuted" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 4H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM16 2v4M8 2v4M3 10h18"/></svg>
+              </button>
+            </div>
+            <p class="text-xl font-black text-textPrimary font-mono" id="val-month-avg">08:12:30</p>
+          </div>
+          
+          <!-- Month Selector Popup Overlay with Native Year Skipping Handles -->
+          <div id="cal-popover-month" class="hidden w-full bg-bgPrimary border border-borderNormal rounded-xl p-3 shadow-md flex flex-col gap-2 mt-1">
+            <div class="flex justify-between items-center text-[10px] font-black text-textSecondary border-b border-borderSubtle pb-1 px-1">
+              <button id="btn-month-prev-year" class="p-1 text-textMuted hover:text-accent font-black text-xs">&lt;</button>
+              <span id="lbl-month-year-context">2026</span>
+              <button id="btn-month-next-year" class="p-1 text-textMuted hover:text-accent font-black text-xs">&gt;</button>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5 py-1 text-[10px] font-bold text-textSecondary" id="month-grid-container">
+              <!-- JS Injected 12 Months -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Day Component Row with Full Variable Matrix Navigation -->
+        <div class="bg-bgSecondary/80 border border-borderNormal rounded-xl p-3.5 flex flex-col gap-2 relative">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-[10px] font-black text-textMuted uppercase tracking-wider">Custom Day</p>
+              <button id="btn-cal-day" class="mt-1 flex items-center gap-1.5 px-2 py-1 rounded-md bg-bgPrimary border border-borderNormal text-[10px] font-black text-textSecondary hover:text-accent hover:border-accent transition-all">
+                <span id="txt-selected-day">Day: Jun 01, 2026</span>
+                <svg class="w-3 h-3 text-textMuted" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 4H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM16 2v4M8 2v4M3 10h18"/></svg>
+              </button>
+            </div>
+            <p class="text-xl font-black text-textPrimary font-mono" id="val-day-avg">00:01:12</p>
+          </div>
+          
+          <!-- Unified Days Grid Interface Popover -->
+          <div id="cal-popover-day" class="hidden w-full bg-bgPrimary border border-borderNormal rounded-xl p-3 shadow-md flex flex-col gap-2 mt-1">
+            <div class="flex justify-between items-center text-[10px] font-black text-textSecondary border-b border-borderSubtle pb-1 px-1">
+              <button id="btn-day-prev-month" class="p-1 text-textMuted hover:text-accent font-black text-xs">&lt;</button>
+              <span id="lbl-day-monthyear-context">June 2026</span>
+              <button id="btn-day-next-month" class="p-1 text-textMuted hover:text-accent font-black text-xs">&gt;</button>
+            </div>
+            <div class="grid grid-cols-7 gap-1 text-center text-[8px] font-black text-textMuted uppercase border-b border-borderSubtle pb-0.5">
+              <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+            </div>
+            <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-textSecondary" id="day-grid-container">
+              <!-- Dynamically mapped calendar cell entries -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Close View Control Actions Trigger -->
+      <button id="close-analysis-btn" class="w-full bg-accent text-white py-3.5 rounded-xl text-xs font-bold transition-all active:scale-98 shadow-sm hover:bg-accentHover">Dismiss Analytics View</button>
+    </div>
+  </div>
+
+  <!-- Script Engine Matrix -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      
+      // Global State Tracking Variables[cite: 1]
+      let selectedYear = 2026;
+      let monthViewYear = 2026;
+      let selectedMonthIndex = 5;
+      let dayViewYear = 2026;
+      let dayViewMonth = 5;
+      let selectedDayNum = 1;
+
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+      // Comprehensive Timeframe Database Mapping[cite: 1]
+      const dashboardDatabase = {
+        week: {
+          title: "Weekly Shift Activity Load",
+          hours: "38:45",
+          trend: "+12%",
+          trendClass: "bg-fnGreen/10 border-fnGreen/20 text-fnGreen",
+          trendIcon: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+          sessions: "6",
+          active: "1",
+          completed: "5",
+          activeDays: "5",
+          avgSession: "06 : 27",
+          bars: [
+            { label: "Mon", rawValue: "4.5 hrs", value: "35%" },
+            { label: "Tue", rawValue: "6.2 hrs", value: "55%" },
+            { label: "Wed", rawValue: "2.0 hrs", value: "15%" },
+            { label: "Thu", rawValue: "9.5 hrs", value: "95%" },
+            { label: "Fri", rawValue: "7.8 hrs", value: "75%" },
+            { label: "Sat", rawValue: "1.5 hrs", value: "10%" },
+            { label: "Sun", rawValue: "0.0 hrs", value: "0%" }
+          ]
+        },
+        month: {
+          title: "Monthly Shift Activity Load",
+          hours: "164:20",
+          trend: "+8%",
+          trendClass: "bg-fnGreen/10 border-fnGreen/20 text-fnGreen",
+          trendIcon: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+          sessions: "24",
+          active: "0",
+          completed: "24",
+          activeDays: "22",
+          avgSession: "06 : 50",
+          bars: [
+            { label: "Wk 1", rawValue: "38.2 hrs", value: "75%" },
+            { label: "Wk 2", rawValue: "44.5 hrs", value: "90%" },
+            { label: "Wk 3", rawValue: "41.0 hrs", value: "82%" },
+            { label: "Wk 4", rawValue: "35.5 hrs", value: "70%" },
+            { label: "Wk 5", rawValue: "5.0 hrs", value: "12%" }
+          ]
+        },
+        year: {
+          title: "Annual Shift Activity Load",
+          hours: "1,842:15",
+          trend: "-3%",
+          trendClass: "bg-fnRed/10 border-fnRed/20 text-fnRed",
+          trendIcon: '<polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>',
+          sessions: "284",
+          active: "0",
+          completed: "284",
+          activeDays: "245",
+          avgSession: "06 : 29",
+          bars: [
+            { label: "Q1", rawValue: "460 hrs", value: "80%" },
+            { label: "Q2", rawValue: "512 hrs", value: "95%" },
+            { label: "Q3", rawValue: "430 hrs", value: "75%" },
+            { label: "Q4", rawValue: "440 hrs", value: "78%" }
+          ]
+        }
+      };
+
+      // HTML DOM Node Referencing Matrix[cite: 1]
+      const barsContainer = document.getElementById('chart-bars-container');
+      const labelsContainer = document.getElementById('chart-labels-container');
+      const chartTitleContext = document.getElementById('chart-title-context');
+      const interactiveReading = document.getElementById('chart-interactive-reading');
+      
+      const hoursDisplay = document.getElementById('hero-total-hours');
+      const trendBadge = document.getElementById('hero-trend-badge');
+      const trendIcon = document.getElementById('hero-trend-icon');
+      const trendText = document.getElementById('hero-trend-text');
+
+      const mSessions = document.getElementById('metric-sessions');
+      const mActive = document.getElementById('metric-active');
+      const mCompleted = document.getElementById('metric-completed');
+      const mDays = document.getElementById('metric-days');
+      const mAvgSession = document.getElementById('metric-avg-session');
+
+      // --- ENGINE INTERACTIVE CHART GENERATION METHOD ---
+      function generateInteractiveChart(timeframe) {
+        const dataset = dashboardDatabase[timeframe];
+        
+        // Wipe containers
+        barsContainer.innerHTML = '';
+        labelsContainer.innerHTML = '';
+        interactiveReading.classList.add('hidden');
+
+        // Render dynamic interactive elements
+        dataset.bars.forEach((barItem) => {
+          // Construct bar visual components
+          const barNode = document.createElement('div');
+          barNode.style.height = barItem.value === "0%" ? "4px" : barItem.value;
+          barNode.className = "flex-1 rounded-sm bg-borderNormal hover:bg-accent/60 transition-all duration-200 cursor-pointer relative group";
+          
+          // Attach interactive actions
+          const selectBar = () => {
+            // Drop styling focus configurations across target siblings
+            Array.from(barsContainer.children).forEach(b => b.classList.replace('bg-accent', 'bg-borderNormal'));
+            // Inject focus to item entry target
+            barNode.classList.replace('bg-borderNormal', 'bg-accent');
+            // Bind value readings context display
+            interactiveReading.textContent = `${barItem.label}: ${barItem.rawValue}`;
+            interactiveReading.classList.remove('hidden');
+          };
+
+          barNode.addEventListener('click', selectBar);
+          barNode.addEventListener('mouseenter', selectBar);
+
+          barsContainer.appendChild(barNode);
+
+          // Construct scale labels alignment layout
+          const labelNode = document.createElement('span');
+          labelNode.className = "flex-1 text-center truncate px-0.5 transition-colors";
+          labelNode.textContent = barItem.label;
+          labelsContainer.appendChild(labelNode);
+        });
+      }
+
+      // --- DYNAMIC INTERFACE MASTER UPDATE DISPATCHER ---
+      function processDashboardUpdate(timeframe) {
+        const dataset = dashboardDatabase[timeframe];
+        if (!dataset) return;
+
+        // Swap out labels, hero units and trend metadata indicators
+        hoursDisplay.textContent = dataset.hours;
+        trendText.textContent = dataset.trend;
+        trendBadge.className = `flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-bold self-start border ${dataset.trendClass}`;
+        trendIcon.innerHTML = dataset.trendIcon;
+        chartTitleContext.textContent = dataset.title;
+
+        // Apply grid metric structural text updates
+        mSessions.textContent = dataset.sessions;
+        mActive.textContent = dataset.active;
+        mCompleted.textContent = dataset.completed;
+        mDays.textContent = dataset.days;
+        mAvgSession.textContent = dataset.avgSession;
+
+        // Process canvas engine rebuild operations
+        generateInteractiveChart(timeframe);
+      }
+
+      // --- INTERACTIVE TIMEFRAME CONTROLLER TABS BINDINGS ---
+      const timeframeFilters = document.querySelectorAll(".time-filter");
+      timeframeFilters.forEach(tabButton => {
+        tabButton.addEventListener("click", () => {
+          // Revert standard structural style tokens across components
+          timeframeFilters.forEach(t => t.className = "time-filter py-2 text-xs font-bold text-textSecondary hover:text-textPrimary rounded-xl transition-all duration-200");
+          // Mount dynamic accent configurations
+          tabButton.className = "time-filter py-2 text-xs font-black text-white bg-accent rounded-xl shadow-xs transition-all duration-200";
+          
+          const selectionTarget = tabButton.getAttribute('data-timeframe');
+          processDashboardUpdate(selectionTarget);
+        });
+      });
+
+      // --- POPOVER MODAL CONTROLLER SYSTEM LAYERS ---[cite: 1]
+      const analysisModalOverlay = document.getElementById('analysis-modal-overlay');
+      const analysisModalContent = document.getElementById('analysis-modal-content');
+      const cardAverageSession = document.getElementById('card-average-session');
+
+      const popoverYear = document.getElementById('cal-popover-year');
+      const popoverMonth = document.getElementById('cal-popover-month');
+      const popoverDay = document.getElementById('cal-popover-day');
+
+      function togglePopover(target) {
+        [popoverYear, popoverMonth, popoverDay].forEach(p => { if(p !== target) p.classList.add('hidden'); });
+        target.classList.toggle('hidden');
+      }
+
+      document.getElementById('btn-cal-year').addEventListener('click', (e) => { e.stopPropagation(); togglePopover(popoverYear); });
+      document.getElementById('btn-cal-month').addEventListener('click', (e) => { e.stopPropagation(); togglePopover(popoverMonth); renderMonthGrid(); });
+      document.getElementById('btn-cal-day').addEventListener('click', (e) => { e.stopPropagation(); togglePopover(popoverDay); renderDayGrid(); });
+
+      document.querySelectorAll('.opt-cal-year').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectedYear = parseInt(btn.getAttribute('data-year'));
+          document.getElementById('txt-selected-year').textContent = `Year: ${selectedYear}`;
+          document.querySelectorAll('.opt-cal-year').forEach(b => b.className = "opt-cal-year p-2 rounded-lg border text-center text-xs font-bold text-textSecondary border-borderNormal hover:border-accent");
+          btn.className = "opt-cal-year p-2 rounded-lg border text-center text-xs font-bold bg-accent text-white border-accent";
+          popoverYear.classList.add('hidden');
+          document.getElementById('val-year-avg').textContent = selectedYear === 2026 ? "07:54:00" : selectedYear === 2025 ? "08:11:15" : "06:48:20";
+        });
+      });
+
+      function renderMonthGrid() {
+        document.getElementById('lbl-month-year-context').textContent = monthViewYear;
+        const container = document.getElementById('month-grid-container');
+        container.innerHTML = '';
+        monthNames.forEach((mName, idx) => {
+          const btn = document.createElement('button');
+          const isCurrentSelection = (selectedMonthIndex === idx && monthViewYear === selectedYear);
+          btn.className = `p-1.5 rounded-md text-center transition-all ${isCurrentSelection ? 'bg-accent text-white font-black' : 'border border-borderNormal text-textSecondary hover:border-accent'}`;
+          btn.textContent = shortMonths[idx];
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedMonthIndex = idx;
+            selectedYear = monthViewYear; 
+            document.getElementById('txt-selected-month').textContent = `Month: ${mName} ${selectedYear}`;
+            popoverMonth.classList.add('hidden');
+            document.getElementById('val-month-avg').textContent = idx === 5 ? "08:12:30" : "07:22:45";
+          });
+          container.appendChild(btn);
+        });
+      }
+
+      document.getElementById('btn-month-prev-year').addEventListener('click', (e) => { e.stopPropagation(); monthViewYear--; renderMonthGrid(); });
+      document.getElementById('btn-month-next-year').addEventListener('click', (e) => { e.stopPropagation(); monthViewYear++; renderMonthGrid(); });
+
+      function renderDayGrid() {
+        document.getElementById('lbl-day-monthyear-context').textContent = `${monthNames[dayViewMonth]} ${dayViewYear}`;
+        const container = document.getElementById('day-grid-container');
+        container.innerHTML = '';
+
+        const firstDayIndex = new Date(dayViewYear, dayViewMonth, 1).getDay();
+        const totalDays = new Date(dayViewYear, dayViewMonth + 1, 0).getDate();
+        const prevMonthTotalDays = new Date(dayViewYear, dayViewMonth, 0).getDate();
+
+        for (let i = firstDayIndex; i > 0; i--) {
+          const span = document.createElement('span');
+          span.className = "text-textDisabled py-1 font-normal opacity-30";
+          span.textContent = prevMonthTotalDays - i + 1;
+          container.appendChild(span);
+        }
+
+        for (let d = 1; d <= totalDays; d++) {
+          const btn = document.createElement('button');
+          const isSelectedDay = (selectedDayNum === d && dayViewMonth === selectedMonthIndex && dayViewYear === selectedYear);
+          btn.className = `py-1 rounded text-center transition-all ${isSelectedDay ? 'bg-accent text-white font-black scale-105 shadow-xs' : 'border border-transparent hover:border-accent text-textSecondary'}`;
+          btn.textContent = d;
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedDayNum = d;
+            selectedMonthIndex = dayViewMonth;
+            selectedYear = dayViewYear;
+            const padDay = d < 10 ? `0${d}` : d;
+            document.getElementById('txt-selected-day').textContent = `Day: ${shortMonths[dayViewMonth]} ${padDay}, ${dayViewYear}`;
+            popoverDay.classList.add('hidden');
+            document.getElementById('val-day-avg').textContent = d === 1 ? "00:01:12" : "04:19:05";
+          });
+          container.appendChild(btn);
+        }
+      }
+
+      document.getElementById('btn-day-prev-month').addEventListener('click', (e) => { e.stopPropagation(); dayViewMonth--; if (dayViewMonth < 0) { dayViewMonth = 11; dayViewYear--; } renderDayGrid(); });
+      document.getElementById('btn-day-next-month').addEventListener('click', (e) => { e.stopPropagation(); dayViewMonth++; if (dayViewMonth > 11) { dayViewMonth = 0; dayViewYear++; } renderDayGrid(); });
+
+      cardAverageSession.addEventListener('click', () => {
+        analysisModalOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        analysisModalContent.classList.remove('translate-y-full');
+      });
+
+      function closeAnalysisModal() {
+        analysisModalOverlay.classList.add('opacity-0', 'pointer-events-none');
+        analysisModalContent.classList.add('translate-y-full');
+        [popoverYear, popoverMonth, popoverDay].forEach(p => p.classList.add('hidden'));
+      }
+
+      document.getElementById('close-analysis-btn').addEventListener('click', closeAnalysisModal);
+      analysisModalOverlay.addEventListener('click', (e) => { if (e.target === analysisModalOverlay) closeAnalysisModal(); });
+
+      // Initialize the default Weekly metrics stream context
+      generateInteractiveChart('week');
+    });
+  </script>
+</body>
+</html>

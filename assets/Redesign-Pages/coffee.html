@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Support Development — Obsidian Modern</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #121212; /* Deep Obsidian dark base canvas */
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .glass-card {
+            background: linear-gradient(180deg, rgba(30, 30, 30, 0.75) 0%, rgba(22, 22, 22, 0.75) 100%);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .glow-effect {
+            box-shadow: 0 0 40px -5px rgba(168, 130, 255, 0.25);
+        }
+
+        /* Pure Obsidian text-based selectable options */
+        .support-option {
+            border-left: 3px solid transparent;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .support-option.active {
+            background: rgba(168, 130, 255, 0.05);
+            border-left-color: #a882ff;
+        }
+    </style>
+</head>
+<body class="min-h-screen w-full flex justify-center items-start p-4 sm:p-6 overflow-x-hidden text-[#e3e3e3] pt-8 pb-12">
+
+    <!-- Subtle ambient background glow -->
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-96 bg-[#a882ff]/5 blur-[120px] pointer-events-none rounded-full"></div>
+
+    <!-- Core App Container Layout Frame -->
+    <div class="w-full max-w-md flex flex-col relative z-10">
+        
+        <!-- Header Controls (Matches layout structure across screenshots) -->
+        <div class="flex items-center justify-between w-full mb-8">
+            <button onclick="window.history.back()" class="w-10 h-10 rounded-xl bg-[#1e1e1e] border border-white/[0.04] flex items-center justify-center text-[#999999] hover:text-[#a882ff] active:scale-95 transition-all cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                </svg>
+            </button>
+            <h2 class="text-[15px] font-bold text-white tracking-wide">Support Development</h2>
+            <div class="w-10 invisible"></div>
+        </div>
+
+        <!-- Central Showcase Frame (Mirrors Screenshot 2026-06-03 175721_2.png) -->
+        <div class="flex flex-col items-center text-center mb-8">
+            <div class="mb-5 relative flex items-center justify-center">
+                <div class="w-24 h-24 rounded-full border border-white/[0.01] absolute"></div>
+                <!-- Clean text/icon container badge matching Obsidian purple theme colors -->
+                <div class="w-20 h-20 rounded-full bg-gradient-to-b from-[#1e1e1e] to-[#141414] border-2 border-[#a882ff] flex items-center justify-center glow-effect relative z-10">
+                    <span class="text-3xl">☕</span>
+                </div>
+            </div>
+            <h1 class="text-2xl font-extrabold tracking-tight text-white">Buy Me a Coffee</h1>
+            <p class="text-[13px] text-[#888888] font-medium max-w-xs mt-2.5 leading-relaxed">
+                If you love using Attenary, consider supporting its development. Your contribution helps keep the app free and continuously improving!
+            </p>
+        </div>
+
+        <!-- Section: Why Support Perks Container Matrix -->
+        <h3 class="text-[12px] font-bold uppercase tracking-wider text-[#666666] mb-3 px-1">Why Support?</h3>
+        <div class="glass-card rounded-2xl p-2 flex flex-col mb-8 border border-[#a882ff]/20">
+            
+            <!-- Item Row 1 -->
+            <div class="flex items-center gap-3.5 p-3.5 border-b border-white/[0.03]">
+                <div class="w-7 h-7 rounded-lg bg-[#a882ff]/10 flex items-center justify-center text-[#a882ff] shrink-0 text-sm">☕</div>
+                <span class="text-[13px] font-medium text-[#d4d4d4]">Support independent development</span>
+            </div>
+
+            <!-- Item Row 2 -->
+            <div class="flex items-center gap-3.5 p-3.5 border-b border-white/[0.03]">
+                <div class="w-7 h-7 rounded-lg bg-[#a882ff]/10 flex items-center justify-center text-[#a882ff] shrink-0 text-sm">☕</div>
+                <span class="text-[13px] font-medium text-[#d4d4d4]">Help fund new features</span>
+            </div>
+
+            <!-- Item Row 3 -->
+            <div class="flex items-center gap-3.5 p-3.5 border-b border-white/[0.03]">
+                <div class="w-7 h-7 rounded-lg bg-[#a882ff]/10 flex items-center justify-center text-[#a882ff] shrink-0 text-sm">☕</div>
+                <span class="text-[13px] font-medium text-[#d4d4d4]">Keep the app free for everyone</span>
+            </div>
+
+            <!-- Item Row 4 -->
+            <div class="flex items-center gap-3.5 p-3.5">
+                <div class="w-7 h-7 rounded-lg bg-[#a882ff]/10 flex items-center justify-center text-[#a882ff] shrink-0 text-sm">☕</div>
+                <span class="text-[13px] font-medium text-[#d4d4d4]">Show your appreciation</span>
+            </div>
+        </div>
+
+        <!-- Section: Pure Text-Based Support Strategy Routes (Mirrors Screenshot 2026-06-03 175729_2.png) -->
+        <h3 class="text-[12px] font-bold uppercase tracking-wider text-[#666666] mb-3 px-1">Ways to Support</h3>
+        <div class="flex flex-col gap-3 mb-8">
+            
+            <!-- Strategic Pathway Card 1 -->
+            <div id="option-one" onclick="updateRedirectRoute('one', '☕ Buy Me a Coffee')" class="support-option active glass-card rounded-2xl p-4 flex items-start gap-4 cursor-pointer">
+                <div class="w-10 h-10 rounded-xl bg-white/[0.03] flex items-center justify-center text-lg shrink-0">
+                    ☕
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-[14px] font-bold text-white">One-Time Support</span>
+                    <span class="text-[12px] text-[#888888] leading-normal">Buy me a coffee as a one-time gesture of appreciation</span>
+                </div>
+            </div>
+
+            <!-- Strategic Pathway Card 2 -->
+            <div id="option-monthly" onclick="updateRedirectRoute('monthly', '⭐ Monthly Support')" class="support-option glass-card rounded-2xl p-4 flex items-start gap-4 cursor-pointer">
+                <div class="w-10 h-10 rounded-xl bg-white/[0.03] flex items-center justify-center text-lg shrink-0">
+                    ⭐
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-[14px] font-bold text-white">Monthly Support</span>
+                    <span class="text-[12px] text-[#888888] leading-normal">Become a recurring supporter and help sustain development</span>
+                </div>
+            </div>
+
+            <!-- Strategic Pathway Card 3 -->
+            <div id="option-share" onclick="updateRedirectRoute('share', '📢 Share the App')" class="support-option glass-card rounded-2xl p-4 flex items-start gap-4 cursor-pointer">
+                <div class="w-10 h-10 rounded-xl bg-white/[0.03] flex items-center justify-center text-lg shrink-0">
+                    📢
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-[14px] font-bold text-white">Share the App</span>
+                    <span class="text-[12px] text-[#888888] leading-normal">Spread the word about Attenary to your friends and colleagues</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Master External Platform Gateway Execution Layer (Premium Obsidian Solid Purple Surface) -->
+        <div class="flex flex-col gap-4 mb-8">
+            <button onclick="handleExternalRedirect()" class="w-full py-4 bg-gradient-to-r from-[#a882ff] to-[#bda0ff] hover:opacity-95 active:scale-[0.99] text-[#121212] text-[15px] font-extrabold rounded-2xl shadow-xl shadow-[#a882ff]/10 flex items-center justify-center gap-2 transition-all cursor-pointer">
+                <span id="dynamicButtonLabel">☕ Buy Me a Coffee</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Section Callout Container Box Surface Header Frame (Mirrors Screenshot 2026-06-03 175729_2.png bottom box) -->
+        <div class="w-full rounded-2xl p-4 border border-[#a882ff]/20 bg-[#a882ff]/[0.02] text-center mb-8">
+            <p class="text-[13px] text-[#bda0ff] font-medium leading-relaxed">
+                Every contribution, no matter how small, makes a huge difference. Thank you for being part of the Attenary community! 💜
+            </p>
+        </div>
+
+        <!-- Frame Attribution Footer Tagline -->
+        <span class="text-[11px] font-semibold text-[#555555] tracking-wide text-center">
+            Made with love for productivity enthusiasts
+        </span>
+
+    </div>
+
+    <!-- State Handler Framework Logic Modules -->
+    <script>
+        // Update this variable path link configuration with your exact personal platform dashboard domain 
+        const externalBuyMeACoffeeUrl = "https://buymeacoffee.com/yourusername";
+        let activeSelectionMode = "one";
+
+        function updateRedirectRoute(selectionId, actionButtonLabel) {
+            activeSelectionMode = selectionId;
+            
+            // Clean active display status from styling rings
+            document.querySelectorAll('.support-option').forEach(element => {
+                element.classList.remove('active');
+            });
+
+            // Re-apply targeted option border indicator highlights
+            document.getElementById(`option-${selectionId}`).classList.add('active');
+
+            // Synchronize the master submission text component node label context dynamically
+            document.getElementById('dynamicButtonLabel').innerText = actionButtonLabel;
+        }
+
+        function handleExternalRedirect() {
+            if (activeSelectionMode === 'share') {
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'Attenary App',
+                        text: 'Explore this great local-first application workspace option platform framework tools setup.',
+                        url: window.location.origin
+                    }).catch(console.error);
+                } else {
+                    alert("Platform sharing link copied securely directly into local clipboard framework space!");
+                }
+            } else {
+                // Forward the environment thread to your BuyMeACoffee account landing web page layout frame
+                console.log(`Forwarding connection request sandbox link instance context outward to secure domain path target node...`);
+                window.open(externalBuyMeACoffeeUrl, '_blank');
+            }
+        }
+    </script>
+</body>
+</html>
