@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BackupSchema, RestorePreview, createBackup as utilCreateBackup, finalizeBackup, saveBackupToFile as utilSaveBackupToFile, saveBackupToStorage, loadBackupFromStorage, loadBackupFromFile, validateBackup, performRestore } from '../utils/backup';
+import { Session } from '../types';
 
 export interface AppData {
   sessions: Session[];
@@ -28,23 +30,29 @@ export interface Session {
 }
 
 interface AppContextType {
-   appData: AppData;
-   loading: boolean;
-   saveData: () => Promise<boolean>;
-   loadData: () => Promise<void>;
-   checkIn: () => Promise<void>;
-   checkOut: (reason?: string) => Promise<void>;
-   setEmployeeName: (name: string) => Promise<void>;
-   setEmail: (email: string) => Promise<void>;
-   setJobTitle: (jobTitle: string) => Promise<void>;
-   setDepartment: (department: string) => Promise<void>;
-   addSessions: (sessions: Session[]) => Promise<boolean>;
-   completeOnboarding: () => Promise<void>;
-   updateOnboardingProgress: (step: number) => Promise<void>;
-   resetOnboardingProgress: () => Promise<void>;
-   storageError: string | null;
-   clearStorageError: () => void;
-   deleteSession: (sessionId: string) => Promise<boolean>;
+  appData: AppData;
+  loading: boolean;
+  saveData: () => Promise<boolean>;
+  loadData: () => Promise<void>;
+  checkIn: () => Promise<void>;
+  checkOut: (reason?: string) => Promise<void>;
+  setEmployeeName: (name: string) => Promise<void>;
+  setEmail: (email: string) => Promise<void>;
+  setJobTitle: (jobTitle: string) => Promise<void>;
+  setDepartment: (department: string) => Promise<void>;
+  addSessions: (sessions: Session[]) => Promise<boolean>;
+  completeOnboarding: () => Promise<void>;
+  updateOnboardingProgress: (step: number) => Promise<void>;
+  resetOnboardingProgress: () => Promise<void>;
+  storageError: string | null;
+  clearStorageError: () => void;
+  deleteSession: (sessionId: string) => Promise<boolean>;
+  createBackup: () => Promise<BackupSchema>;
+  saveBackup: (backup: BackupSchema) => Promise<{ fileName: string; size: number } | null>;
+  getStoredBackup: () => Promise<BackupSchema | null>;
+  importBackupFromFile: () => Promise<BackupSchema | null>;
+  previewImport: (backup: BackupSchema) => Promise<RestorePreview>;
+  restoreBackup: (backup: BackupSchema, mode?: 'merge' | 'replace' | 'skip', dryRun?: boolean) => Promise<RestorePreview>;
 }
 
 const STORAGE_KEY = 'PHARMACY_ATTENDANCE_DATA_V2';
@@ -62,23 +70,23 @@ interface AppProviderProps {
 }
 
 export const Provider = ({ children }: AppProviderProps) => {
-const [appData, setAppData] = useState<AppData>({
-      sessions: [],
-      employeeName: '',
-      email: '',
-      jobTitle: '',
-      department: '',
-      onboardingCompleted: false,
-      onboardingProgress: {
-        currentStep: 0,
-        completedSteps: [],
-        lastVisited: Date.now(),
-      },
-      appSettings: {
-        theme: 'dark',
-        notifications: true,
-      },
-    });
+  const [appData, setAppData] = useState<AppData>({
+    sessions: [],
+    employeeName: '',
+    email: '',
+    jobTitle: '',
+    department: '',
+    onboardingCompleted: false,
+    onboardingProgress: {
+      currentStep: 0,
+      completedSteps: [],
+      lastVisited: Date.now(),
+    },
+    appSettings: {
+      theme: 'dark',
+      notifications: true,
+    },
+  });
   const [loading, setLoading] = useState(true);
   const [storageError, setStorageError] = useState<string | null>(null);
   const appDataRef = useRef<AppData>(appData);
@@ -248,12 +256,197 @@ const [appData, setAppData] = useState<AppData>({
     return false;
   };
 
+  const createBackup = async (): Promise<BackupSchema> => {
+    const backup = utilCreateBackup(appData);
+    return finalizeBackup(backup);
+  };
+
+  const saveBackup = async (backup: BackupSchema): Promise<{ fileName: string; size: number } | null> => {
+    const saved = await utilSaveBackupToFile(backup);
+    const stored = await saveBackupToStorage(backup);
+    if (stored && saved) {
+      return saved;
+    }
+    return null;
+  };
+
+  const getStoredBackup = async (): Promise<BackupSchema | null> => {
+    return loadBackupFromStorage();
+  };
+
+  const importBackupFromFile = async (): Promise<BackupSchema | null> => {
+    return loadBackupFromFile();
+  };
+
+  const previewImport = async (backup: BackupSchema): Promise<RestorePreview> => {
+    const validation = await validateBackup(backup);
+    if (!validation.valid) {
+      return {
+        valid: false,
+        schemaVersion: backup?.header?.schemaVersion || 'unknown',
+        appVersion: backup?.header?.appVersion || 'unknown',
+        recordCounts: {
+          sessions: { new: 0, duplicate: 0, conflicting: 0 },
+          employeeName: false,
+          email: false,
+          jobTitle: false,
+          department: false,
+          onboardingProgress: false,
+          appSettings: false,
+        },
+        totalNewRecords: 0,
+        totalDuplicate: 0,
+        totalConflicting: 0,
+        error: validation.error,
+      };
+    }
+    return {
+      valid: true,
+      schemaVersion: backup.header.schemaVersion,
+      appVersion: backup.header.appVersion,
+      recordCounts: {
+        sessions: { new: 0, duplicate: 0, conflicting: 0 },
+        employeeName: false,
+        email: false,
+        jobTitle: false,
+        department: false,
+        onboardingProgress: false,
+        appSettings: false,
+      },
+      totalNewRecords: 0,
+      totalDuplicate: 0,
+      totalConflicting: 0,
+    };
+  };
+
+  const restoreBackup = async (
+    backup: BackupSchema,
+    mode: 'merge' | 'replace' | 'skip' = 'skip',
+    dryRun: boolean = false
+  ): Promise<RestorePreview> => {
+    const validation = await validateBackup(backup);
+    if (!validation.valid) {
+      return {
+        valid: false,
+        schemaVersion: backup?.header?.schemaVersion || 'unknown',
+        appVersion: backup?.header?.appVersion || 'unknown',
+        recordCounts: {
+          sessions: { new: 0, duplicate: 0, conflicting: 0 },
+          employeeName: false,
+          email: false,
+          jobTitle: false,
+          department: false,
+          onboardingProgress: false,
+          appSettings: false,
+        },
+        totalNewRecords: 0,
+        totalDuplicate: 0,
+        totalConflicting: 0,
+        error: validation.error,
+      };
+    }
+
+    const preview = await performRestore(backup, appData, { mode, dryRun });
+
+    if (!dryRun && preview.success) {
+      const existingSessionChecksums = new Map(
+        appData.sessions.map(s => [s.sessionId, s])
+      );
+
+      const sessionsToKeep = [...appData.sessions];
+      let newSessionsAdded = 0;
+      let duplicateSessionsSkipped = 0;
+
+      for (const session of backup.data.sessions) {
+        const existing = existingSessionChecksums.get(session.sessionId);
+        if (!existing) {
+          sessionsToKeep.push(session);
+          newSessionsAdded++;
+        } else if (mode === 'replace' || mode === 'merge') {
+          const index = sessionsToKeep.findIndex(s => s.sessionId === session.sessionId);
+          if (index >= 0) {
+            sessionsToKeep[index] = session;
+          }
+        } else {
+          duplicateSessionsSkipped++;
+        }
+      }
+
+      const newData = {
+        ...appData,
+        sessions: sessionsToKeep,
+        employeeName: backup.data.employeeName || appData.employeeName,
+        email: backup.data.email || appData.email,
+        jobTitle: backup.data.jobTitle || appData.jobTitle,
+        department: backup.data.department || appData.department,
+        onboardingCompleted: backup.data.onboardingCompleted ?? appData.onboardingCompleted,
+        onboardingProgress: backup.data.onboardingProgress || appData.onboardingProgress,
+        appSettings: backup.data.appSettings || appData.appSettings,
+      };
+
+      const previousData = appDataRef.current;
+      appDataRef.current = newData;
+      setAppData(newData);
+
+      try {
+        await saveData();
+      } catch (error) {
+        console.error('Restore failed, rolling back:', error);
+        appDataRef.current = previousData;
+        setAppData(previousData);
+        await saveData();
+        return {
+          valid: false,
+          schemaVersion: backup.header.schemaVersion,
+          appVersion: backup.header.appVersion,
+          recordCounts: {
+            sessions: { new: 0, duplicate: 0, conflicting: 0 },
+            employeeName: false,
+            email: false,
+            jobTitle: false,
+            department: false,
+            onboardingProgress: false,
+            appSettings: false,
+          },
+          totalNewRecords: 0,
+          totalDuplicate: 0,
+          totalConflicting: 0,
+          error: 'Restore failed - rolled back to previous state',
+        };
+      }
+    }
+
+    return {
+      valid: true,
+      schemaVersion: backup.header.schemaVersion,
+      appVersion: backup.header.appVersion,
+      recordCounts: {
+        sessions: {
+          new: preview.imported.sessions,
+          duplicate: preview.skipped.sessions,
+          conflicting: 0,
+        },
+        employeeName: !!backup.data.employeeName,
+        email: !!backup.data.email,
+        jobTitle: !!backup.data.jobTitle,
+        department: !!backup.data.department,
+        onboardingProgress: !!backup.data.onboardingProgress,
+        appSettings: !!backup.data.appSettings,
+      },
+      totalNewRecords: preview.imported.sessions,
+      totalDuplicate: preview.skipped.sessions,
+      totalConflicting: 0,
+    };
+  };
+
   const value = {
     appData, loading, storageError,
     saveData, loadData, checkIn, checkOut,
     setEmployeeName, setEmail, setJobTitle, setDepartment,
     addSessions, completeOnboarding, updateOnboardingProgress, resetOnboardingProgress,
     clearStorageError, deleteSession,
+    createBackup, saveBackup, getStoredBackup,
+    importBackupFromFile, previewImport, restoreBackup,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
