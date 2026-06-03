@@ -6,6 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppData, Session } from '../types';
 import { BackupSchema, BackupData, BACKUP_SCHEMA_VERSION, BACKUP_STORAGE_KEY, RestorePreview, RestoreResult, RestoreOptions } from '../types/backup';
 
+export { BackupSchema, RestorePreview, computeRecordChecksum };
+
 const APP_VERSION = '2.6.47';
 
 async function calculateChecksum(data: string): Promise<string> {
@@ -16,11 +18,12 @@ async function calculateChecksum(data: string): Promise<string> {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   } else {
-    const { CryptoDigestAlgorithm, digestStringAsync } = await import('expo-crypto');
+    const { CryptoDigestAlgorithm, CryptoEncoding } = require('expo-crypto');
+    const { digestStringAsync } = require('expo-crypto');
     return digestStringAsync(
       CryptoDigestAlgorithm.SHA256,
       data,
-      { encoding: (await import('expo-crypto')).CryptoEncoding.HEX }
+      { encoding: CryptoEncoding.HEX }
     );
   }
 }
@@ -175,10 +178,9 @@ export async function validateBackup(backup: BackupSchema): Promise<{ valid: boo
   const currentVersion = BACKUP_SCHEMA_VERSION;
   const backupVersion = backup.header.schemaVersion;
   
-  const [currentMajor, currentMinor] = currentVersion.split('.').map(Number);
-  const [backupMajor] = backupVersion.split('.')[0] as unknown as number;
+  const backupMajor = parseInt(backupVersion.split('.')[0], 10);
 
-  if (backupMajor > currentMajor) {
+  if (backupMajor > parseInt(currentVersion.split('.')[0], 10)) {
     return { valid: false, error: `Incompatible backup version: ${backupVersion}. App version: ${currentVersion}` };
   }
 
@@ -243,12 +245,12 @@ export async function performRestore(
       success: true,
       imported: {
         sessions: preview.totalNewRecords,
-        employeeName: !!backup.data.employeeName,
-        email: !!backup.data.email,
-        jobTitle: !!backup.data.jobTitle,
-        department: !!backup.data.department,
-        onboardingProgress: !!backup.data.onboardingProgress,
-        appSettings: !!backup.data.appSettings,
+        employeeName: false,
+        email: false,
+        jobTitle: false,
+        department: false,
+        onboardingProgress: false,
+        appSettings: false,
       },
       skipped: {
         sessions: preview.totalDuplicate,
@@ -267,10 +269,14 @@ export async function performRestore(
       sessionsToAdd.push(session);
     } else {
       const existingChecksum = computeRecordChecksum(existingSession);
-      if (existingChecksum === newChecksum) {
+      if (existingChecksum !== newChecksum) {
+        if (options.mode === 'replace') {
+          sessionsToAdd.push(session);
+        } else {
+          skippedCount++;
+        }
+      } else {
         skippedCount++;
-      } else if (options.mode === 'merge' || options.mode === 'replace') {
-        sessionsToAdd.push(session);
       }
     }
   }
@@ -279,15 +285,34 @@ export async function performRestore(
     success: true,
     imported: {
       sessions: sessionsToAdd.length,
-      employeeName: !!backup.data.employeeName,
-      email: !!backup.data.email,
-      jobTitle: !!backup.data.jobTitle,
-      department: !!backup.data.department,
-      onboardingProgress: !!backup.data.onboardingProgress,
-      appSettings: !!backup.data.appSettings,
+      employeeName: false,
+      email: false,
+      jobTitle: false,
+      department: false,
+      onboardingProgress: false,
+      appSettings: false,
     },
     skipped: {
       sessions: skippedCount,
     },
   };
+}
+
+function logImportEvent(backup: BackupSchema, result: RestoreResult): void {
+  const logEntry = {
+    date: new Date().toISOString(),
+    fileName: backup.header.appVersion,
+    recordCounts: result.imported,
+    conflicts: result.skipped.sessions,
+  };
+  if (Platform.OS === 'web') {
+    try {
+      const existing = localStorage.getItem('ATTENARY_IMPORT_LOG');
+      const logs = existing ? JSON.parse(existing) : [];
+      logs.push(logEntry);
+      localStorage.setItem('ATTENARY_IMPORT_LOG', JSON.stringify(logs.slice(-100)));
+    } catch {
+      // Silently fail for logging
+    }
+  }
 }

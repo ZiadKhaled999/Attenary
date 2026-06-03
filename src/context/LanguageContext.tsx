@@ -8,7 +8,7 @@ interface LanguageContextType {
   language: Language;
   isRTL: boolean;
   setLanguage: (lang: Language, skipReload?: boolean) => Promise<void>;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -52,6 +52,10 @@ const translations: Record<Language, Record<string, string>> = {
     'more.coffeeSubtitle': 'Support the developer',
     'more.languages': 'Languages',
     'more.languagesSubtitle': 'Change app language',
+    'more.backup': 'Backup',
+    'more.backupSubtitle': 'Create a backup of your data',
+    'restoreBackup.title': 'Restore Backup',
+    'restoreBackup.subtitle': 'Restore from a backup file',
     
     // Languages Screen
     'languages.title': 'Languages',
@@ -76,7 +80,44 @@ const translations: Record<Language, Record<string, string>> = {
     'common.error': 'Error',
     'common.success': 'Success',
     'common.loading': 'Loading...',
-    'common.noData': 'No data available',
+'common.noData': 'No data available',
+    
+    // Backup Screen
+    'backup.title': 'Backup',
+    'backup.subtitle': 'Secure your data',
+    'backup.totalSessions': 'Total Sessions',
+    'backup.lastBackup': 'Last Backup',
+    'backup.createBackup': 'Create Backup',
+    'backup.creating': 'Creating...',
+    'backup.backupSuccess': 'Backup created: {fileName} ({size} KB)',
+    'backup.backupFailed': 'Failed to create backup',
+    'backup.backupError': 'An error occurred while creating the backup',
+    'backup.lastBackupCreated': 'Backup Created Successfully',
+'backup.size': 'Size',
+    'backup.created': 'Created',
+    'backup.infoText': 'Your backup is saved to your device and stored locally. It contains all your sessions, profile, and settings.',
+    'backup.previewTitle': 'Backup Preview',
+    'backup.conflictWarning': 'Conflicting Records Detected',
+    'backup.conflictMessage': '{count} sessions have different data than existing records',
+    
+    // Restore Backup Screen
+    'restoreBackup.selectFile': 'Select Backup File',
+    'restoreBackup.importing': 'Importing...',
+    'restoreBackup.noFileSelected': 'No backup file selected',
+    'restoreBackup.invalidBackup': 'Invalid backup file format',
+    'restoreBackup.importError': 'Failed to import backup file',
+    'restoreBackup.newRecords': 'New Records',
+    'restoreBackup.duplicateRecords': 'Already Exist',
+    'restoreBackup.conflictingRecords': 'Conflicting',
+    'restoreBackup.dataTypes': 'Data Types',
+    'restoreBackup.dryRun': 'Preview Changes',
+    'restoreBackup.replaceExisting': 'Replace Existing',
+    'restoreBackup.dryRunComplete': 'Dry run complete. {count} records would be imported.',
+    'restoreBackup.restoreSuccess': 'Restore complete. {count} records imported.',
+    'restoreBackup.restoreFailed': 'Failed to restore backup',
+    'restoreBackup.restoreError': 'An error occurred during restore',
+    'restoreBackup.allItemsExist': 'Import complete — all items in this backup already exist in your app.',
+    'restoreBackup.infoText': 'Select a backup file to restore your data. The import will merge with existing data, preserving any records not in the backup.',
     
     // TimeClock Screen
     'timeclock.title': 'Time Clock',
@@ -398,6 +439,12 @@ const translations: Record<Language, Record<string, string>> = {
     'more.coffeeSubtitle': 'ادعم المطور',
     'more.languages': 'اللغات',
     'more.languagesSubtitle': 'تغيير لغة التطبيق',
+    'more.backup': 'نسخة احتياطية',
+    'more.backupSubtitle': 'إنشاء نسخة احتياطية لبياناتك',
+    'more.restoreBackup': 'استرداد النسخة الاحتياطية',
+    'more.restoreBackupSubtitle': 'استرداد البيانات من ملف',
+    'restoreBackup.title': 'استرداد النسخة الاحتياطية',
+    'restoreBackup.subtitle': 'استرداد البيانات من ملف النسخة الاحتياطية',
     
     // Languages Screen
     'languages.title': 'اللغات',
@@ -695,6 +742,31 @@ const translations: Record<Language, Record<string, string>> = {
     'sessiondetails.completed': 'مكتملة',
     'sessiondetails.sessionStillActive': 'الجلسة لا تزال نشطة',
     
+    // Backup Screen
+    'backup.infoText': 'يتم حفظ النسخة الاحتياطية على جهازك وتخزينها محليًا. يحتوي على جميع جلساتك وملفك الشخصي وإعداداتك.',
+    'backup.previewTitle': 'معاينة النسخة الاحتياطية',
+    
+    // Restore Backup Screen
+    'restoreBackup.selectFile': 'اختر ملف النسخة الاحتياطية',
+    'restoreBackup.importing': 'جاري الاستيراد...',
+    'restoreBackup.noFileSelected': 'لم يتم اختيار ملف نسخة احتياطية',
+    'restoreBackup.invalidBackup': 'تنسيق ملف النسخة الاحتياطية غير صالح',
+    'restoreBackup.importError': 'فشل استيراد ملف النسخة الاحتياطية',
+    'restoreBackup.newRecords': 'سجلات جديدة',
+    'restoreBackup.duplicateRecords': 'موجودة بالفعل',
+    'restoreBackup.conflictingRecords': 'متضادة',
+    'restoreBackup.dataTypes': 'أنواع البيانات',
+    'restoreBackup.dryRun': 'معاينة التغييرات',
+    'restoreBackup.replaceExisting': 'استبدال الموجود',
+    'restoreBackup.dryRunComplete': 'اكتملت المعاينة. {count} سجلات سيتم استيرادها.',
+    'restoreBackup.restoreSuccess': 'اكتمل الاستيراد. تم استيراد {count} سجلات.',
+    'restoreBackup.restoreFailed': 'فشل استيراد النسخة الاحتياطية',
+    'restoreBackup.restoreError': 'حدث خطأ أثناء الاستيراد',
+    'restoreBackup.allItemsExist': 'اكتمل الاستيراد — جميع العناصر في هذه النسخة موجودة بالفعل في التطبيق.',
+    'restoreBackup.infoText': 'اختر ملف نسخة احتياطية لاستيراد بياناتك. سيتم دمج البيانات مع البيانات الحالية، مع الحفاظ على السجلات غير الموجودة في النسخة الاحتياطية.',
+    'backup.conflictWarning': 'تم اكتشاف سجلات متضادة',
+    'backup.conflictMessage': '{count} جلسات لديها بيانات مختلفة عن السجلات الموجودة',
+    
     // Check In/Out Modals
     'modal.checkInTitle': 'تسجيل الدخول',
     'modal.checkOutTitle': 'تسجيل الخروج',
@@ -784,8 +856,14 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     }
   };
 
-  const t = (key: string): string => {
-    return translations[language][key] || key;
+  const t = (key: string, params?: Record<string, string | number>): string => {
+    let text = translations[language][key] || key;
+    if (params) {
+      Object.entries(params).forEach(([paramKey, value]) => {
+        text = text.replace(`{${paramKey}}`, String(value));
+      });
+    }
+    return text;
   };
 
   const isRTL = language === 'ar';

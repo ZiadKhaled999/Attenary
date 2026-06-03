@@ -14,6 +14,8 @@ import ManageScreen from '../screens/ManageScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import MoreScreen from '../screens/MoreScreen';
+import BackupScreen from '../screens/BackupScreen';
+import RestoreBackupScreen from '../screens/RestoreBackupScreen';
 import AboutScreen from '../screens/AboutScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import BuyMeCoffeeScreen from '../screens/BuyMeCoffeeScreen';
@@ -61,6 +63,8 @@ type MainStackParamList = {
   SessionDetails: { sessionId: string };
   Languages: undefined;
   Feedbacks: undefined;
+  Backup: undefined;
+  RestoreBackup: undefined;
 };
 
 const Navigation = () => {
@@ -139,6 +143,8 @@ const Navigation = () => {
         <Stack.Screen name="SessionDetails" component={SessionDetailsScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Languages" component={LanguagesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Feedbacks" component={FeedbacksScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Backup" component={BackupScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="RestoreBackup" component={RestoreBackupScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
 
       {showUpdateModal && updateInfo && (

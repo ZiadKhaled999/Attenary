@@ -21,14 +21,14 @@ const DatabaseIcon = ({ size = 60 }: { size?: number }) => (
 
 const BackupScreen = () => {
   const { t } = useLanguage();
-  const { createBackup, saveBackup, getBackupStats, loading } = useApp();
+  const { appData, createBackup, saveBackup, loading } = useApp();
   const [isCreating, setIsCreating] = useState(false);
   const [lastBackup, setLastBackup] = useState<{ fileName: string; size: number; timestamp: string } | null>(null);
   const [backupStats, setBackupStats] = useState({ totalSessions: 0, lastBackup: null as string | null });
 
   useEffect(() => {
-    setBackupStats(getBackupStats());
-  }, [getBackupStats]);
+    setBackupStats({ totalSessions: appData.sessions.length, lastBackup: null });
+  }, []);
 
   const handleCreateBackup = async () => {
     if (loading || isCreating) return;
