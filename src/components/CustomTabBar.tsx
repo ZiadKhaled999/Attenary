@@ -10,6 +10,7 @@ import {
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import { Home, CalendarDays, FileText, History, BarChart3, User, MoreHorizontal } from 'lucide-react-native';
+import { useTabBarVisibility } from '../context/TabBarVisibilityContext';
 
 // ─── Design tokens (mirrors Navbar.html CSS vars) ───────────────────────────
 const TOKEN = {
@@ -46,10 +47,8 @@ const ICONS: Record<string, React.ComponentType<any>> = {
 };
 
 // ─── Easing equivalent to cubic-bezier(0.25, 1, 0.5, 1) ─────────────────────
-// React Native Animated doesn't take raw beziers, so we use spring physics
-// that visually match the "fluid slide" feel.
 const FLUID_SPRING = {
-  useNativeDriver: false,   // layout values can't use native driver
+  useNativeDriver: false,
   tension: 120,
   friction: 14,
 };
@@ -96,6 +95,24 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
 
   // Track whether this is first render (no animation, just snap)
   const isFirstRender = useRef(true);
+
+  const { visible, setVisible } = useTabBarVisibility();
+  const tabBarOpacity = useRef(new Animated.Value(1)).current;
+  const tabBarTranslateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(tabBarOpacity,   { toValue: 1, tension: 120, friction: 14, useNativeDriver: true }),
+        Animated.spring(tabBarTranslateY, { toValue: 0, tension: 120, friction: 14, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(tabBarOpacity,   { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(tabBarTranslateY, { toValue: 80, duration: 220, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible, setVisible]);
 
   // ── Move pill to active tab ──────────────────────────────────────────────
   function movePillTo(index: number, animate: boolean) {
@@ -165,7 +182,16 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <View style={styles.outerWrapper}>
+    <Animated.View
+      style={[
+        styles.outerWrapper,
+        {
+          opacity: tabBarOpacity,
+          transform: [{ translateY: tabBarTranslateY }],
+        },
+      ]}
+      pointerEvents={visible ? 'auto' : 'none'}
+    >
       {/* Glassmorphism panel */}
       <View style={styles.glassPanel}>
         {Platform.OS === 'ios' ? (
@@ -215,7 +241,6 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
                     style={
                       isActive
                         ? {
-                            // drop-shadow equivalent on RN (iOS shadow / Android elevation)
                             shadowColor: TOKEN.white,
                             shadowOffset: { width: 0, height: 2 },
                             shadowOpacity: 0.4,
@@ -230,14 +255,13 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
           })}
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 };
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   outerWrapper: {
-    // Keeps the bar floating above the screen edge
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 28 : 16,
     left: 16,
@@ -246,19 +270,17 @@ const styles = StyleSheet.create({
   },
 
   glassPanel: {
-    // Matches .glass-panel
     width: '100%',
     maxWidth: 480,
-    borderRadius: TOKEN.size4_8,           // 32px — border-radius: var(--size-4-8)
+    borderRadius: TOKEN.size4_8,
     borderWidth: 1,
     borderColor: TOKEN.base30,
     backgroundColor:
       Platform.OS === 'android'
-        ? 'rgba(0,0,0,0.82)'               // Android fallback (no BlurView)
+        ? 'rgba(0,0,0,0.82)'
         : 'rgba(0,0,0,0.45)',
-    padding: TOKEN.size4_2,                // 8px — padding: var(--size-4-2)
+    padding: TOKEN.size4_2,
     overflow: 'hidden',
-    // box-shadow approximation
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 20 },
     shadowOpacity: 0.6,
@@ -267,11 +289,9 @@ const styles = StyleSheet.create({
   },
 
   fluidPill: {
-    // Matches .fluid-pill
     position: 'absolute',
-    borderRadius: TOKEN.size4_6,           // 24px — border-radius: var(--size-4-6)
+    borderRadius: TOKEN.size4_6,
     backgroundColor: TOKEN.accentPrimary,
-    // inset + drop shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
@@ -289,7 +309,7 @@ const styles = StyleSheet.create({
 
   tabButton: {
     flex: 1,
-    height: TOKEN.size4_12,               // 48px — height: var(--size-4-12)
+    height: TOKEN.size4_12,
     borderRadius: TOKEN.size4_6,
     alignItems: 'center',
     justifyContent: 'center',

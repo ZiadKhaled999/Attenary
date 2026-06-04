@@ -12,6 +12,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
+import { useTabBarVisibility } from '../context/TabBarVisibilityContext';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 import { getDateString } from '../utils/timeUtils';
 import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
@@ -39,6 +40,7 @@ const CheckOutIcon = ({ color = colors.textFaint, size = 22 }: { color?: string;
 const TimeClockScreen = () => {
   const { appData, checkIn, checkOut } = useApp();
   const { t, isRTL, language } = useLanguage();
+  const { setVisible } = useTabBarVisibility();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentDate, setCurrentDate] = useState(new Date());
   const [employeeName, setEmployeeName] = useState(appData.employeeName);
@@ -112,6 +114,7 @@ const TimeClockScreen = () => {
     setModalVisible(true);
     setSelectedReason('');
     setCustomReason('');
+    setVisible(false);
   };
 
   const finalizeCheckOut = async () => {
@@ -120,6 +123,7 @@ const TimeClockScreen = () => {
     setModalVisible(false);
     setSelectedReason('');
     setCustomReason('');
+    setVisible(true);
   };
 
   const skipAndFinish = async () => {
@@ -127,6 +131,7 @@ const TimeClockScreen = () => {
     setModalVisible(false);
     setSelectedReason('');
     setCustomReason('');
+    setVisible(true);
   };
 
   const selectReason = (reason: string) => {
@@ -276,7 +281,7 @@ const TimeClockScreen = () => {
           ═══════════════════════════════════════════════════════════ */}
       {modalVisible && (
         <View style={styles.modalOverlay}>
-          <TouchableOpacity style={styles.modalBackdrop} onPress={() => setModalVisible(false)} />
+          <TouchableOpacity style={styles.modalBackdrop} onPress={() => { setModalVisible(false); setVisible(true); }} />
           <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: slideAnim }] }]}>
             {/* Decorative Drag Handle Bar */}
             <View style={styles.dragHandle} />

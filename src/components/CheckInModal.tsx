@@ -9,6 +9,7 @@ import {
   Animated,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
+import { useTabBarVisibility } from '../context/TabBarVisibilityContext';
 import { useLanguage } from '../context/LanguageContext';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 
@@ -23,21 +24,28 @@ const SuccessIcon = ({ size = 48 }: { size?: number }) => (
 const CheckInModal = ({ navigation, route }: any) => {
   const { appData, checkIn } = useApp();
   const { t } = useLanguage();
+  const { setVisible } = useTabBarVisibility();
   const [modalVisible, setModalVisible] = useState(true);
   const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
+    setVisible(false);
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
       e.preventDefault();
       setModalVisible(false);
+      setVisible(true);
       navigation.dispatch(e.data.action);
     });
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, setVisible]);
 
   const closeModal = () => {
     setModalVisible(false);
+    setVisible(true);
     navigation.goBack();
   };
 

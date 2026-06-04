@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
+import { useTabBarVisibility } from '../context/TabBarVisibilityContext';
 import { useLanguage } from '../context/LanguageContext';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 import { formatTime, formatTimeReversed } from '../utils/timeUtils';
@@ -24,21 +25,28 @@ const DocumentIcon = ({ size = 24 }: { size?: number }) => (
 const CheckOutModal = ({ navigation, route }: any) => {
   const { appData, checkOut } = useApp();
   const { t } = useLanguage();
+  const { setVisible } = useTabBarVisibility();
   const [modalVisible, setModalVisible] = useState(true);
   const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    setVisible(false);
+  }, [setVisible]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
       e.preventDefault();
       setModalVisible(false);
+      setVisible(true);
       navigation.dispatch(e.data.action);
     });
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, setVisible]);
 
   const closeModal = () => {
     setModalVisible(false);
     setReason('');
+    setVisible(true);
     navigation.goBack();
   };
 

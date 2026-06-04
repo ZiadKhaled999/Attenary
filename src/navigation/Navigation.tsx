@@ -25,7 +25,7 @@ import FeedbacksScreen from '../screens/FeedbacksScreen';
 import CheckInModal from '../components/CheckInModal';
 import CheckOutModal from '../components/CheckOutModal';
 import CustomTabBar from '../components/CustomTabBar';
-
+import { TabBarVisibilityProvider } from '../context/TabBarVisibilityContext';
 import { checkForUpdate, UpdateInfo } from '../utils/updateService';
 
 const Tab = createBottomTabNavigator();
@@ -94,96 +94,98 @@ const Navigation = () => {
   };
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        id="RootStack"
-        initialRouteName={initialRoute}
-        screenOptions={{
-          headerStyle: { backgroundColor: '#0f172a' },
-          headerTintColor: '#f1f5f9',
-          contentStyle: { backgroundColor: '#0f172a' },
-          headerShown: false,
-        }}
-      >
-        <Stack.Screen
-          name="Onboarding"
-          component={OnboardingScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Main"
-          component={MainTabs}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="CheckInModal"
-          component={CheckInModal}
-          options={{
-            presentation: 'transparentModal',
-            headerTitle: 'Check In',
+    <TabBarVisibilityProvider>
+      <NavigationContainer>
+        <Stack.Navigator
+          id="RootStack"
+          initialRouteName={initialRoute}
+          screenOptions={{
             headerStyle: { backgroundColor: '#0f172a' },
             headerTintColor: '#f1f5f9',
+            contentStyle: { backgroundColor: '#0f172a' },
+            headerShown: false,
           }}
-        />
-        <Stack.Screen
-          name="CheckOutModal"
-          component={CheckOutModal}
-          options={{
-            presentation: 'transparentModal',
-            headerTitle: 'Check Out',
-            headerStyle: { backgroundColor: '#0f172a' },
-            headerTintColor: '#f1f5f9',
-          }}
-        />
-        <Stack.Screen name="About" component={AboutScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="BuyMeCoffee" component={BuyMeCoffeeScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="SessionDetails" component={SessionDetailsScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Languages" component={LanguagesScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Feedbacks" component={FeedbacksScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Backup" component={BackupScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="RestoreBackup" component={RestoreBackupScreen} options={{ headerShown: false }} />
-      </Stack.Navigator>
-
-      {showUpdateModal && updateInfo && (
-        <Modal
-          transparent
-          animationType="fade"
-          visible={showUpdateModal}
-          onRequestClose={handleDismissUpdate}
         >
-          <View style={styles.updateOverlay}>
-            <View style={styles.updateContainer}>
-              <View style={styles.updateIconContainer}>
-                <Text style={styles.updateIcon}>⬆️</Text>
-              </View>
-              <Text style={styles.updateTitle}>New Update Available!</Text>
-              <Text style={styles.updateVersion}>Version {updateInfo.version}</Text>
-              <Text style={styles.updateReleaseNotes}>{updateInfo.releaseNotes}</Text>
-              {updateInfo.mandatory && (
-                <Text style={styles.updateMandatory}>This update is required</Text>
-              )}
-              <TouchableOpacity
-                style={styles.updateButton}
-                onPress={async () => {
-                  const { downloadAndInstallUpdate } = await import('../utils/updateService');
-                  const success = await downloadAndInstallUpdate(updateInfo.downloadUrl);
-                  if (!success) {
-                    Alert.alert('Error', 'Could not open download link. Please try again or visit the app store.');
-                  }
-                }}
-              >
-                <Text style={styles.updateButtonText}>Update Now</Text>
-              </TouchableOpacity>
-              {!updateInfo.mandatory && (
-                <TouchableOpacity style={styles.laterButton} onPress={handleDismissUpdate}>
-                  <Text style={styles.laterButtonText}>Later</Text>
+          <Stack.Screen
+            name="Onboarding"
+            component={OnboardingScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Main"
+            component={MainTabs}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CheckInModal"
+            component={CheckInModal}
+            options={{
+              presentation: 'transparentModal',
+              headerTitle: 'Check In',
+              headerStyle: { backgroundColor: '#0f172a' },
+              headerTintColor: '#f1f5f9',
+            }}
+          />
+          <Stack.Screen
+            name="CheckOutModal"
+            component={CheckOutModal}
+            options={{
+              presentation: 'transparentModal',
+              headerTitle: 'Check Out',
+              headerStyle: { backgroundColor: '#0f172a' },
+              headerTintColor: '#f1f5f9',
+            }}
+          />
+          <Stack.Screen name="About" component={AboutScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="BuyMeCoffee" component={BuyMeCoffeeScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="SessionDetails" component={SessionDetailsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Languages" component={LanguagesScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Feedbacks" component={FeedbacksScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Backup" component={BackupScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="RestoreBackup" component={RestoreBackupScreen} options={{ headerShown: false }} />
+        </Stack.Navigator>
+
+        {showUpdateModal && updateInfo && (
+          <Modal
+            transparent
+            animationType="fade"
+            visible={showUpdateModal}
+            onRequestClose={handleDismissUpdate}
+          >
+            <View style={styles.updateOverlay}>
+              <View style={styles.updateContainer}>
+                <View style={styles.updateIconContainer}>
+                  <Text style={styles.updateIcon}>⬆️</Text>
+                </View>
+                <Text style={styles.updateTitle}>New Update Available!</Text>
+                <Text style={styles.updateVersion}>Version {updateInfo.version}</Text>
+                <Text style={styles.updateReleaseNotes}>{updateInfo.releaseNotes}</Text>
+                {updateInfo.mandatory && (
+                  <Text style={styles.updateMandatory}>This update is required</Text>
+                )}
+                <TouchableOpacity
+                  style={styles.updateButton}
+                  onPress={async () => {
+                    const { downloadAndInstallUpdate } = await import('../utils/updateService');
+                    const success = await downloadAndInstallUpdate(updateInfo.downloadUrl);
+                    if (!success) {
+                      Alert.alert('Error', 'Could not open download link. Please try again or visit the app store.');
+                    }
+                  }}
+                >
+                  <Text style={styles.updateButtonText}>Update Now</Text>
                 </TouchableOpacity>
-              )}
+                {!updateInfo.mandatory && (
+                  <TouchableOpacity style={styles.laterButton} onPress={handleDismissUpdate}>
+                    <Text style={styles.laterButtonText}>Later</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </View>
-        </Modal>
-      )}
-    </NavigationContainer>
+          </Modal>
+        )}
+      </NavigationContainer>
+    </TabBarVisibilityProvider>
   );
 };
 
