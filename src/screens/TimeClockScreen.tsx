@@ -84,6 +84,14 @@ const TimeClockScreen = () => {
   }, [activeSession]);
 
   useEffect(() => {
+    if (!activeSession) return;
+    const timer = setInterval(() => {
+      setLiveSessionSeconds(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [activeSession]);
+
+  useEffect(() => {
     setLiveTotalSeconds(totalSeconds);
   }, [totalSeconds]);
 
