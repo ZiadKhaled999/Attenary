@@ -1,264 +1,296 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Platform, Pressable, Dimensions } from 'react-native';
-import Svg, { Path, Circle, Line, Polyline, Rect } from 'react-native-svg';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSequence,
-  Easing,
-} from 'react-native-reanimated';
+import React, { useRef, useEffect, useState } from 'react';
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  LayoutChangeEvent,
+  Platform,
+} from 'react-native';
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { BlurView } from 'expo-blur';
+import { Home, CalendarDays, FileText, History, BarChart3, User, MoreHorizontal } from 'lucide-react-native';
 
-const NAV_BG = 'rgba(0,0,0,0.45)';
-const BORDER_COLOR = '#363636';
-const ACCENT = '#8b6cef';
-const PILL_RADIUS = 24;
-const BTN_SIZE = 48;
-const NAV_PADDING = 8;
-const PANEL_RADIUS = 32;
-const SLIDE_DURATION = 400;
-const SLIDE_EASING = Easing.bezier(0.25, 1, 0.5, 1);
+// ─── Design tokens (mirrors Navbar.html CSS vars) ───────────────────────────
+const TOKEN = {
+  base00: '#1e1e1e',
+  base05: '#212121',
+  base20: '#262626',
+  base25: '#2a2a2a',
+  base30: '#363636',
+  base35: '#3f3f3f',
+  base40: '#555555',
+  base50: '#666666',
+  base60: '#999999',
+  base70: '#bababa',
+  base100: '#dadada',
+  accentPrimary: 'hsl(254, 80%, 68%)',   // --interactive-accent
+  white: '#ffffff',
+  size4_2: 8,
+  size4_3: 12,
+  size4_4: 16,
+  size4_6: 24,
+  size4_8: 32,
+  size4_12: 48,
+};
 
-const HomePath = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-    <Polyline points="9 22 9 12 15 12 15 22" />
-  </Svg>
-);
-const DailyLogPath = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-    <Rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-    <Line x1="16" y1="2" x2="16" y2="6" />
-    <Line x1="8" y1="2" x2="8" y2="6" />
-    <Line x1="3" y1="10" x2="21" y2="10" />
-  </Svg>
-);
-const MonthlyReportPath = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <Polyline points="14 2 14 8 20 8" />
-    <Line x1="16" y1="13" x2="8" y2="13" />
-    <Line x1="16" y1="17" x2="8" y2="17" />
-    <Line x1="10" y1="9" x2="8" y2="9" />
-  </Svg>
-);
-const HistoryPath = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-    <Circle cx="12" cy="12" r="10" />
-    <Polyline points="12 6 12 12 16 14" />
-  </Svg>
-);
-const AnalyticsPath = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-    <Line x1="18" y1="20" x2="18" y2="10" />
-    <Line x1="12" y1="20" x2="12" y2="4" />
-    <Line x1="6" y1="20" x2="6" y2="14" />
-  </Svg>
-);
-const ProfilePath = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <Circle cx="12" cy="7" r="4" />
-  </Svg>
-);
-const MorePath = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-    <Circle cx="12" cy="5" r="1.5" />
-    <Circle cx="12" cy="12" r="1.5" />
-    <Circle cx="12" cy="19" r="1.5" />
-  </Svg>
-);
+// ─── Icon map: screen name → Lucide component ────────────────────────────────
+const ICONS: Record<string, React.ComponentType<any>> = {
+  TimeClock:     Home,
+  DailyLog:      CalendarDays,
+  MonthlyReport: FileText,
+  History:       History,
+  Analytics:     BarChart3,
+  Profile:       User,
+  More:          MoreHorizontal,
+};
 
-const TAB_NAMES = ['TimeClock', 'DailyLog', 'MonthlyReport', 'History', 'Analytics', 'Profile', 'More'];
-const ICON_PATHS = [HomePath, DailyLogPath, MonthlyReportPath, HistoryPath, AnalyticsPath, ProfilePath, MorePath];
+// ─── Easing equivalent to cubic-bezier(0.25, 1, 0.5, 1) ─────────────────────
+// React Native Animated doesn't take raw beziers, so we use spring physics
+// that visually match the "fluid slide" feel.
+const FLUID_SPRING = {
+  useNativeDriver: false,   // layout values can't use native driver
+  tension: 120,
+  friction: 14,
+};
 
-type TabConfig = { name: string; Icon: React.FC };
-
-interface CustomTabBarProps {
-  state: { index: number };
-  navigation: { emit: (e: any) => any; navigate: (name: string) => void };
+// ─── Jelly keyframes: scaleX(1.15/0.9) → scaleY(0.85/1.05) ─────────────────
+function runJelly(scaleX: Animated.Value, scaleY: Animated.Value) {
+  Animated.sequence([
+    Animated.parallel([
+      Animated.timing(scaleX, { toValue: 1.15, duration: 120, useNativeDriver: true }),
+      Animated.timing(scaleY, { toValue: 0.85, duration: 120, useNativeDriver: true }),
+    ]),
+    Animated.parallel([
+      Animated.timing(scaleX, { toValue: 0.9,  duration: 120, useNativeDriver: true }),
+      Animated.timing(scaleY, { toValue: 1.05, duration: 120, useNativeDriver: true }),
+    ]),
+    Animated.parallel([
+      Animated.timing(scaleX, { toValue: 1,    duration: 80,  useNativeDriver: true }),
+      Animated.timing(scaleY, { toValue: 1,    duration: 80,  useNativeDriver: true }),
+    ]),
+  ]).start();
 }
 
-const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, navigation }) => {
-  const tabs: TabConfig[] = TAB_NAMES.map((name, i) => ({ name, Icon: ICON_PATHS[i] }));
+// ─── Component ───────────────────────────────────────────────────────────────
+const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
+  // Layout slots measured per tab button
+  const [tabLayouts, setTabLayouts] = useState<Array<{ x: number; width: number; height: number }>>([]);
 
-  const [layouts, setLayouts] = useState<{ left: number; top: number; width: number; height: number }[]>([]);
-  const activeIndex = state.index ?? 0;
+  // Animated values for the fluid backing pill
+  const pillLeft   = useRef(new Animated.Value(0)).current;
+  const pillWidth  = useRef(new Animated.Value(0)).current;
+  const pillHeight = useRef(new Animated.Value(TOKEN.size4_12)).current;
 
-  const indLeft = useSharedValue(0);
-  const indTop = useSharedValue(0);
-  const indWidth = useSharedValue(0);
-  const indHeight = useSharedValue(0);
-  const indScaleX = useSharedValue(1);
-  const indScaleY = useSharedValue(1);
+  // Jelly morph scale values
+  const pillScaleX = useRef(new Animated.Value(1)).current;
+  const pillScaleY = useRef(new Animated.Value(1)).current;
 
-  const updateIndicator = useCallback(
-    (index: number, animate: boolean) => {
-      if (!layouts[index]) return;
-      const l = layouts[index];
+  // Per-icon animated opacities & translateY
+  const iconAnims = useRef(
+    state.routes.map(() => ({
+      opacity:     new Animated.Value(0.4),
+      translateY:  new Animated.Value(0),
+    }))
+  ).current;
+
+  // Track whether this is first render (no animation, just snap)
+  const isFirstRender = useRef(true);
+
+  // ── Move pill to active tab ──────────────────────────────────────────────
+  function movePillTo(index: number, animate: boolean) {
+    const layout = tabLayouts[index];
+    if (!layout) return;
+
+    if (!animate) {
+      pillLeft.setValue(layout.x);
+      pillWidth.setValue(layout.width);
+      pillHeight.setValue(layout.height);
+    } else {
+      Animated.parallel([
+        Animated.spring(pillLeft,   { toValue: layout.x,      ...FLUID_SPRING }),
+        Animated.spring(pillWidth,  { toValue: layout.width,  ...FLUID_SPRING }),
+        Animated.spring(pillHeight, { toValue: layout.height, ...FLUID_SPRING }),
+      ]).start();
+      runJelly(pillScaleX, pillScaleY);
+    }
+  }
+
+  // ── Update icons (active vs inactive) ────────────────────────────────────
+  function syncIcons(activeIndex: number, animate: boolean) {
+    iconAnims.forEach((anim, i) => {
+      const isActive = i === activeIndex;
+      const targetOpacity = isActive ? 1 : 0.4;
+      const targetY       = isActive ? -1 : 0;
 
       if (!animate) {
-        indLeft.value = l.left;
-        indTop.value = l.top;
-        indWidth.value = l.width;
-        indHeight.value = l.height;
-        indScaleX.value = 1;
-        indScaleY.value = 1;
-        return;
+        anim.opacity.setValue(targetOpacity);
+        anim.translateY.setValue(targetY);
+      } else {
+        Animated.parallel([
+          Animated.timing(anim.opacity,    { toValue: targetOpacity, duration: 250, useNativeDriver: true }),
+          Animated.spring(anim.translateY, { toValue: targetY, tension: 200, friction: 10, useNativeDriver: true }),
+        ]).start();
       }
-
-      const cfg = { duration: SLIDE_DURATION, easing: SLIDE_EASING };
-      indWidth.value = withTiming(l.width, cfg);
-      indHeight.value = withTiming(l.height, cfg);
-      indLeft.value = withTiming(l.left, cfg);
-      indTop.value = withTiming(l.top, cfg);
-
-      indScaleX.value = withSequence(
-        withTiming(1.15, { duration: 120, easing: Easing.linear }),
-        withTiming(0.9, { duration: 100, easing: Easing.linear }),
-        withTiming(1, { duration: 160, easing: Easing.linear })
-      );
-      indScaleY.value = withSequence(
-        withTiming(0.85, { duration: 120, easing: Easing.linear }),
-        withTiming(1.05, { duration: 100, easing: Easing.linear }),
-        withTiming(1, { duration: 160, easing: Easing.linear })
-      );
-    },
-    [layouts]
-  );
-
-  useEffect(() => {
-    updateIndicator(activeIndex, false);
-  }, []);
-
-  useEffect(() => {
-    updateIndicator(activeIndex, true);
-  }, [activeIndex, updateIndicator]);
-
-  useEffect(() => {
-    const sub = Dimensions.addEventListener('change', () => {
-      updateIndicator(activeIndex, false);
     });
-    return () => sub?.remove();
-  }, [activeIndex, updateIndicator]);
+  }
 
+  // ── Re-position pill whenever active tab OR layouts change ───────────────
   useEffect(() => {
-    const hasLayout = layouts.length > 0 && layouts[activeIndex];
-    if (!hasLayout) return;
-    updateIndicator(activeIndex, false);
-  }, [layouts, activeIndex, updateIndicator]);
+    if (tabLayouts.length !== state.routes.length) return;
+    const animate = !isFirstRender.current;
+    movePillTo(state.index, animate);
+    syncIcons(state.index, animate);
+    if (isFirstRender.current) isFirstRender.current = false;
+  }, [state.index, tabLayouts]);
 
-  const animatedIndicator = useAnimatedStyle(() => ({
-    position: 'absolute',
-    left: indLeft.value,
-    top: indTop.value,
-    width: indWidth.value,
-    height: indHeight.value,
-    borderRadius: PILL_RADIUS,
-    backgroundColor: ACCENT,
-    transform: [{ scaleX: indScaleX.value }, { scaleY: indScaleY.value }] as any,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
-    elevation: 8,
-  }));
+  // ── Capture individual tab button layout ─────────────────────────────────
+  const handleTabLayout = (index: number) => (e: LayoutChangeEvent) => {
+    const { x, width, height } = e.nativeEvent.layout;
+    setTabLayouts(prev => {
+      const next = [...prev];
+      next[index] = { x, width, height };
+      return next;
+    });
+  };
 
+  // ── Handle tap ────────────────────────────────────────────────────────────
+  const handlePress = (route: typeof state.routes[0], index: number) => {
+    if (state.index === index) return;
+    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+    if (!event.defaultPrevented) {
+      navigation.navigate(route.name);
+    }
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <View style={styles.navbar}>
-      <Animated.View style={animatedIndicator} pointerEvents="none" />
-      <View style={styles.navbarContainer}>
-        {tabs.map((tab, index) => {
-          const isFocused = activeIndex === index;
+    <View style={styles.outerWrapper}>
+      {/* Glassmorphism panel */}
+      <View style={styles.glassPanel}>
+        {Platform.OS === 'ios' ? (
+          <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+        ) : null}
 
-          const onPress = () => {
-            if (isFocused) return;
-            const event = navigation.emit({ type: 'tabPress', target: tab.name, canPreventDefault: true });
-            if (!event.defaultPrevented) {
-              navigation.navigate(tab.name);
-            }
-          };
+        {/* Fluid backing pill */}
+        <Animated.View
+          style={[
+            styles.fluidPill,
+            {
+              left:   pillLeft,
+              width:  pillWidth,
+              height: pillHeight,
+              transform: [{ scaleX: pillScaleX }, { scaleY: pillScaleY }],
+            },
+          ]}
+          pointerEvents="none"
+        />
 
-          return (
-            <Pressable
-              key={tab.name}
-              onPress={onPress}
-              style={({ pressed }) => [styles.tabWrapper, pressed && styles.tabItemPressed]}
-            >
-              <View
-                style={styles.tabItem}
-                onLayout={(e) => {
-                  const { x, y, width, height } = e.nativeEvent.layout;
-                  setLayouts((prev) => {
-                    const copy = [...prev];
-                    copy[index] = { left: x, top: y, width, height };
-                    return copy;
-                  });
-                }}
+        {/* Tab buttons */}
+        <View style={styles.tabRow}>
+          {state.routes.map((route, index) => {
+            const isActive = state.index === index;
+            const IconComponent = ICONS[route.name] ?? MoreHorizontal;
+            const anim = iconAnims[index];
+
+            return (
+              <TouchableOpacity
+                key={route.key}
+                activeOpacity={0.8}
+                accessibilityLabel={descriptors[route.key]?.options?.tabBarLabel as string ?? route.name}
+                onLayout={handleTabLayout(index)}
+                onPress={() => handlePress(route, index)}
+                style={styles.tabButton}
               >
                 <Animated.View
-                  style={[
-                    styles.iconInner,
-                    {
-                      opacity: isFocused ? 1 : 0.4,
-                      transform: [{ scale: isFocused ? 1.12 : 1 }, { translateY: isFocused ? -1 : 0 }],
-                    },
-                  ]}
+                  style={{
+                    opacity:   anim.opacity,
+                    transform: [{ translateY: anim.translateY }],
+                  }}
                 >
-                  <tab.Icon />
+                  <IconComponent
+                    size={20}
+                    strokeWidth={2.2}
+                    color={TOKEN.white}
+                    style={
+                      isActive
+                        ? {
+                            // drop-shadow equivalent on RN (iOS shadow / Android elevation)
+                            shadowColor: TOKEN.white,
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.4,
+                            shadowRadius: 8,
+                          }
+                        : undefined
+                    }
+                  />
                 </Animated.View>
-              </View>
-            </Pressable>
-          );
-        })}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
 };
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  navbar: {
-    backgroundColor: NAV_BG,
-    paddingVertical: NAV_PADDING,
-    paddingHorizontal: NAV_PADDING,
-    borderTopWidth: 1,
-    borderTopColor: BORDER_COLOR,
-    borderRadius: PANEL_RADIUS,
-    position: 'relative',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 20 },
-        shadowOpacity: 0.6,
-        shadowRadius: 50,
-      },
-      android: {
-        elevation: 20,
-      },
-    }),
+  outerWrapper: {
+    // Keeps the bar floating above the screen edge
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 28 : 16,
+    left: 16,
+    right: 16,
+    alignItems: 'center',
   },
-  navbarContainer: {
+
+  glassPanel: {
+    // Matches .glass-panel
+    width: '100%',
+    maxWidth: 480,
+    borderRadius: TOKEN.size4_8,           // 32px — border-radius: var(--size-4-8)
+    borderWidth: 1,
+    borderColor: TOKEN.base30,
+    backgroundColor:
+      Platform.OS === 'android'
+        ? 'rgba(0,0,0,0.82)'               // Android fallback (no BlurView)
+        : 'rgba(0,0,0,0.45)',
+    padding: TOKEN.size4_2,                // 8px — padding: var(--size-4-2)
+    overflow: 'hidden',
+    // box-shadow approximation
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.6,
+    shadowRadius: 40,
+    elevation: 24,
+  },
+
+  fluidPill: {
+    // Matches .fluid-pill
+    position: 'absolute',
+    borderRadius: TOKEN.size4_6,           // 24px — border-radius: var(--size-4-6)
+    backgroundColor: TOKEN.accentPrimary,
+    // inset + drop shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+
+  tabRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    position: 'relative',
+    zIndex: 10,
   },
-  tabWrapper: {
+
+  tabButton: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabItem: {
-    height: BTN_SIZE,
-    width: BTN_SIZE,
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: PILL_RADIUS,
-  },
-  tabItemPressed: {
-    opacity: 0.8,
-  },
-  iconInner: {
+    height: TOKEN.size4_12,               // 48px — height: var(--size-4-12)
+    borderRadius: TOKEN.size4_6,
     alignItems: 'center',
     justifyContent: 'center',
   },
