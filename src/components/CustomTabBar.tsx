@@ -203,6 +203,22 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
 
         {/* Tab buttons */}
         <View style={styles.tabRow}>
+          {/* Fluid backing pill — rendered first so buttons stack above it */}
+          <Animated.View
+            style={[
+              styles.fluidPill,
+              {
+                left:   pillLeft,
+                top:    pillTop,
+                width:  pillWidth,
+                height: pillHeight,
+                transform: [{ scaleX: pillScaleX }, { scaleY: pillScaleY }],
+                zIndex: 0,
+              },
+            ]}
+            pointerEvents="none"
+          />
+
           {state.routes.map((route, index) => {
             const isActive = state.index === index;
             const IconComponent = ICONS[route.name] ?? MoreHorizontal;
@@ -215,7 +231,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
                 accessibilityLabel={descriptors[route.key]?.options?.tabBarLabel as string ?? route.name}
                 onLayout={handleTabLayout(index)}
                 onPress={() => handlePress(route, index)}
-                style={styles.tabButton}
+                style={[styles.tabButton, { zIndex: 1 }]}
               >
                 <Animated.View
                   style={{
@@ -226,13 +242,13 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
                   <IconComponent
                     size={20}
                     strokeWidth={2.2}
-                    color={TOKEN.white}
+                    color={isActive ? TOKEN.white : TOKEN.base60}
                     style={
                       isActive
                         ? {
-                            shadowColor: TOKEN.white,
+                            shadowColor: TOKEN.accentPrimary,
                             shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.4,
+                            shadowOpacity: 0.6,
                             shadowRadius: 8,
                           }
                         : undefined
@@ -241,23 +257,8 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
                 </Animated.View>
               </TouchableOpacity>
             );
-          })}
+           })}
 
-          {/* Fluid backing pill — lives inside tabRow so its coordinates
-              match the tabButton.onLayout measurements directly */}
-          <Animated.View
-            style={[
-              styles.fluidPill,
-              {
-                left:   pillLeft,
-                top:    pillTop,
-                width:  pillWidth,
-                height: pillHeight,
-                transform: [{ scaleX: pillScaleX }, { scaleY: pillScaleY }],
-              },
-            ]}
-            pointerEvents="none"
-          />
         </View>
       </View>
     </Animated.View>
