@@ -6,641 +6,447 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
   StatusBar,
-  Image,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useApp } from '../context/AppContext';
-import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
-import { formatTime, getDateString, formatTimeReversed } from '../utils/timeUtils';
-import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import { formatTime, formatTimeReversed } from '../utils/timeUtils';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { Session } from '../types';
-import { useLanguage } from '../context/LanguageContext';
 
-// ═══════════════════════════════════════════════════════════════════
-// FUTURISTIC 2026 GLASSMORPHISM ICONS
-// ═══════════════════════════════════════════════════════════════════
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-const HistoryIcon = ({ size = 24 }: { size?: number }) => (
-  <Image 
-    source={require('../../assets/icons/history.png')} 
-    style={{ width: size, height: size }} 
-    resizeMode="contain"
-  />
-);
+const colorsMap = {
+  bgMain: '#1e1e1e',
+  surfaceCard: '#242424',
+  surfaceAlt: '#262626',
+  borderMain: '#363636',
+  borderSubtle: '#2a2a2a',
+  textMain: '#dadada',
+  textMuted: '#999999',
+  textFaint: '#666666',
+  accentPurple: '#a882ff',
+  statusRed: '#fb464c',
+  statusGreen: '#44cf6e',
+  white: '#ffffff',
+};
 
 const SearchIcon = ({ size = 20 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="11" cy="11" r="7" stroke={colors.textMuted} strokeWidth="2" />
-    <Path d="M21 21l-4.35-4.35" stroke={colors.textMuted} strokeWidth="2" strokeLinecap="round" />
+    <Circle cx="11" cy="11" r="7" stroke={colorsMap.textMuted} strokeWidth="2.5" />
+    <Path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke={colorsMap.textMuted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
-const CalendarIcon = ({ size = 18 }: { size?: number }) => (
+const ChevronIcon = ({ size = 20 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Rect x="3" y="4" width="18" height="18" rx="2" stroke={colors.textSecondary} strokeWidth="2" />
-    <Path d="M3 10h18M8 2v4M16 2v4" stroke={colors.textSecondary} strokeWidth="2" strokeLinecap="round" />
+    <Path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" stroke={colorsMap.textMuted} strokeWidth="2.5" />
   </Svg>
 );
 
-const ClockIcon = ({ size = 16 }: { size?: number }) => (
+const FilterIcon = ({ size = 20 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="12" cy="12" r="9" stroke={colors.textMuted} strokeWidth="2" />
-    <Path d="M12 7v5l3 3" stroke={colors.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <Path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" stroke={colorsMap.accentPurple} strokeWidth="2.2" />
   </Svg>
 );
+
+type FilterState = {
+  year: string | null;
+  month: string | null;
+  status: 'live' | 'completed' | null;
+  day: string | null;
+};
+
+const EMPTY_FILTER: FilterState = { year: null, month: null, status: null, day: null };
 
 const HistoryScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
-  const { appData, deleteSession } = useApp();
-  const { t, isRTL, language } = useLanguage();
+  const { appData, loading } = useApp();
+
+  const safeSessions = appData?.sessions ?? [];
+
+  const years = useMemo(() => {
+    const uniqueYears = new Set<number>();
+    safeSessions.forEach((s) => uniqueYears.add(new Date(s.checkInTime).getFullYear()));
+    uniqueYears.add(new Date().getFullYear());
+    return Array.from(uniqueYears).sort((a, b) => b - a);
+  }, [safeSessions]);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'checked-in' | 'checked-out'>('all');
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTER);
+  const [sheetVisible, setSheetVisible] = useState(false);
 
-  const handleSessionPress = (session: Session) => {
-    navigation.navigate('SessionDetails', { session });
-  };
+  const sessions = useMemo(() => {
+    let list = [...safeSessions];
+    if (!list.length) return list;
 
-  const filteredSessions = useMemo(() => {
-    let sessions = [...appData.sessions];
-    
-    // Apply search filter
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      sessions = sessions.filter((s: any) => {
-        const date = new Date(s.checkInTime).toLocaleDateString();
-        const duration = s.checkOutTime
-          ? formatTime(Math.floor((s.checkOutTime - s.checkInTime) / 1000))
-          : 'Active';
-        return date.toLowerCase().includes(query) || duration.toLowerCase().includes(query);
+      const q = searchQuery.toLowerCase();
+      list = list.filter((s: any) => {
+        const d = new Date(s.checkInTime);
+        const header = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        return header.toLowerCase().includes(q);
       });
     }
 
-    // Apply status filter
-    if (filter === 'checked-in') {
-      sessions = sessions.filter((s: any) => s.checkOutTime === null);
-    } else if (filter === 'checked-out') {
-      sessions = sessions.filter((s: any) => s.checkOutTime !== null);
+    if (filters.year) {
+      list = list.filter((s) => new Date(s.checkInTime).getFullYear().toString() === filters.year);
+    }
+    if (filters.month) {
+      list = list.filter((s) => MONTHS[new Date(s.checkInTime).getMonth()] === filters.month);
+    }
+    if (filters.status) {
+      list = list.filter((s) => (filters.status === 'live' ? s.checkOutTime === null : s.checkOutTime !== null));
+    }
+    if (filters.day) {
+      list = list.filter((s) => new Date(s.checkInTime).getDate().toString() === filters.day);
     }
 
-    // Sort by check-in time (newest first)
-    return sessions.sort((a: any, b: any) => b.checkInTime - a.checkInTime);
-  }, [appData.sessions, searchQuery, filter]);
+    return list.sort((a, b) => b.checkInTime - a.checkInTime);
+  }, [safeSessions, searchQuery, filters]);
 
-  const totalCheckedIn = appData.sessions.filter((s: any) => s.checkOutTime === null).length;
-  const totalCheckedOut = appData.sessions.filter((s: any) => s.checkOutTime !== null).length;
+  const renderSession = (session: Session) => {
+    const checkIn = new Date(session.checkInTime);
+    const checkOut = session.checkOutTime ? new Date(session.checkOutTime) : null;
+    const durationMs = checkOut ? checkOut.getTime() - checkIn.getTime() : Date.now() - checkIn.getTime();
+    const durationSec = Math.max(Math.floor(durationMs / 1000), 0);
+    const isLive = session.checkOutTime === null;
+
+    const dateHeader = checkIn.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const recordId = `Session Record #${session.sessionId.slice(-3).toUpperCase()} — ${checkIn.getFullYear()}`;
+    const checkInTime = formatTimeReversed(checkIn);
+    const checkOutTime = checkOut ? formatTimeReversed(checkOut) : '—';
+
+    return (
+      <TouchableOpacity
+        key={session.sessionId}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('SessionDetails', { session })}
+        style={styles.sessionCard}
+      >
+        <View style={styles.sessionHeader}>
+          <View style={styles.sessionHeaderLeft}>
+            <Text style={styles.sessionDate}>{dateHeader}</Text>
+            <Text style={styles.sessionRecord}>{recordId}</Text>
+          </View>
+          <View style={[styles.chevronCircle, isLive && styles.chevronCircleLive]}>
+            <ChevronIcon size={20} />
+          </View>
+        </View>
+
+        <View style={styles.statsGrid}>
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>Check In</Text>
+            <Text style={styles.statValue}>{checkInTime}</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>Check Out</Text>
+            <Text style={[styles.statValue, !checkOut && styles.statValueMuted]}>{checkOutTime}</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>Status</Text>
+            <Text style={[styles.statValue, isLive ? styles.statusLive : styles.statusCompleted]}>
+              {isLive ? 'Active Session' : 'Completed'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.durationRow}>
+          <View style={styles.durationLeft}>
+            <Text style={styles.durationTitle}>{isLive ? 'Accumulated Duration' : 'Duration'}</Text>
+            <Text style={[styles.durationValue, isLive && styles.durationValueLive]}>{formatTime(durationSec)}</Text>
+          </View>
+          <View style={styles.progressTrack}>
+            <View style={styles.progressFill}>
+              <View style={[styles.progressBar, isLive ? styles.progressBarLive : styles.progressBarCompleted]} />
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* ═══════════════════════════════════════════════════════════
-            HEADER SECTION
-            ═══════════════════════════════════════════════════════════ */}
-        <View style={styles.headerSection}>
-          <View style={[
-            styles.headerIconContainer,
-            isRTL && styles.headerIconContainerRTL
-          ]}>
-            <HistoryIcon size={48} />
-          </View>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>{t('history.title')}</Text>
-            <Text style={styles.subtitle}>{t('history.subtitle')}</Text>
-          </View>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>History</Text>
+          <Text style={styles.headerSubtitle}>Your session records</Text>
         </View>
 
-        {/* ═══════════════════════════════════════════════════════════
-            SEARCH BAR - Glass Input
-            ═══════════════════════════════════════════════════════════ */}
-        <View style={styles.searchContainer}>
-          <View style={[
-            styles.searchIconContainer,
-            isRTL && styles.searchIconContainerRTL
-          ]}>
-            <SearchIcon size={20} />
+        <View style={styles.stickyBar}>
+          <View style={styles.searchBox}>
+            <SearchIcon />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by details..."
+              placeholderTextColor={colorsMap.textFaint}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
-          <TextInput
-            style={styles.searchInput}
-            placeholder={t('history.searchPlaceholder')}
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-
-        {/* ═══════════════════════════════════════════════════════════
-            FILTER BUTTONS - Glass Pills
-            ═══════════════════════════════════════════════════════════ */}
-        <View style={styles.filterContainer}>
-          <TouchableOpacity
-            style={[styles.filterButton, filter === 'all' && styles.filterButtonActive]}
-            onPress={() => setFilter('all')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.filterButtonText, filter === 'all' && styles.filterButtonTextActive]}>
-              {t('history.filterAll').replace('{count}', String(appData.sessions.length))}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.filterButton, filter === 'checked-in' && styles.filterButtonActive]}
-            onPress={() => setFilter('checked-in')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.filterDotActive} />
-            <Text style={[styles.filterButtonText, filter === 'checked-in' && styles.filterButtonTextActive]}>
-              {t('history.filterActive').replace('{count}', String(totalCheckedIn))}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.filterButton, filter === 'checked-out' && styles.filterButtonActive]}
-            onPress={() => setFilter('checked-out')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.filterButtonText, filter === 'checked-out' && styles.filterButtonTextActive]}>
-              {t('history.filterDone').replace('{count}', String(totalCheckedOut))}
-            </Text>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => setSheetVisible(true)} style={styles.filterButton}>
+            <FilterIcon />
           </TouchableOpacity>
         </View>
 
-        {/* ═══════════════════════════════════════════════════════════
-            SUMMARY - Glass Card
-            ═══════════════════════════════════════════════════════════ */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryText}>
-            {t('history.showingSessions').replace('{shown}', String(filteredSessions.length)).replace('{total}', String(appData.sessions.length))}
-          </Text>
+        <View style={styles.counterRow}>
+          <Text style={styles.counterLabel}>Showing {sessions.length} of {safeSessions.length} sessions</Text>
+          <Text style={styles.timelineLabel}>Timeline Feed</Text>
         </View>
 
-        {/* ═══════════════════════════════════════════════════════════
-            SESSIONS LIST - Glass Cards
-            ═══════════════════════════════════════════════════════════ */}
-        <View style={styles.sessionsContainer}>
-          {filteredSessions.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconContainer}>
-                <HistoryIcon size={40} />
-              </View>
-              <Text style={styles.emptyStateTitle}>{t('history.noSessionsFound')}</Text>
-              <Text style={styles.emptyStateSubtext}>
-                {searchQuery || filter !== 'all'
-                  ? t('history.adjustSearch')
-                  : t('history.startCheckingIn')}
-              </Text>
-            </View>
-          ) : (
-            filteredSessions.map((session: any) => {
-              const duration = session.checkOutTime
-                ? Math.floor((session.checkOutTime - session.checkInTime) / 1000)
-                : Date.now() - session.checkInTime;
-              
-              return (
-                <TouchableOpacity 
-                  key={session.sessionId} 
-                  style={styles.sessionCard}
-                  onPress={() => handleSessionPress(session)}
-                  activeOpacity={0.7}
-                >
-                  {/* Session Header */}
-                  <View style={styles.sessionHeader}>
-                    <View style={styles.sessionHeaderLeft}>
-                      <View style={[
-                        styles.sessionStatusDot,
-                        session.checkOutTime === null && styles.sessionStatusDotActive,
-                        isRTL && styles.sessionStatusDotRTL
-                      ]} />
-                      <View>
-                        <Text style={styles.sessionDate}>
-                          {new Date(session.checkInTime).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </Text>
-                        <Text style={styles.sessionYear}>
-                          {new Date(session.checkInTime).getFullYear()}
-                        </Text>
-                      </View>
-                    </View>
-                    
-                    <View style={[
-                      styles.sessionStatusBadge,
-                      session.checkOutTime === null && styles.sessionStatusBadgeActive
-                    ]}>
-                      <Text style={[
-                        styles.sessionStatusText,
-                        session.checkOutTime === null && styles.sessionStatusTextActive
-                      ]}>
-                        {session.checkOutTime === null ? t('dailylog.active') : t('dailylog.completed')}
-                      </Text>
-                    </View>
-                  </View>
+        <View style={styles.list}>{sessions.map((s) => renderSession(s))}</View>
 
-                  {/* Session Times */}
-                  <View style={styles.sessionTimesContainer}>
-                    <View style={[
-                      styles.sessionTimeRow,
-                      isRTL && styles.sessionTimeRowRTL
-                    ]}>
-                      <ClockIcon size={14} />
-                      <Text style={[styles.sessionTimeLabel, isRTL && styles.sessionTimeLabelRTL]}>{t('history.checkIn')}:</Text>
-                      <Text style={[styles.sessionTimeValue, isRTL && styles.sessionTimeValueRTL]}>
-                        {formatTimeReversed(new Date(session.checkInTime))}
-                      </Text>
-                    </View>
-                    
-                    <View style={[
-                      styles.sessionTimeRow,
-                      isRTL && styles.sessionTimeRowRTL
-                    ]}>
-                      <ClockIcon size={14} />
-                      <Text style={[styles.sessionTimeLabel, isRTL && styles.sessionTimeLabelRTL]}>{t('history.checkOut')}:</Text>
-                      <Text style={[styles.sessionTimeValue, isRTL && styles.sessionTimeValueRTL]}>
-                        {session.checkOutTime
-                          ? formatTimeReversed(new Date(session.checkOutTime))
-                          : t('history.notApplicable')}
-                      </Text>
-                    </View>
-                  </View>
+        {sessions.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>No sessions found</Text>
+            <Text style={styles.emptySub}>Try adjusting your search or filters.</Text>
+          </View>
+        )}
 
-                  {/* Session Duration */}
-                  <View style={styles.sessionDurationContainer}>
-                    <Text style={styles.sessionDurationLabel}>{t('history.duration')}</Text>
-                    <Text style={[
-                      styles.sessionDurationValue,
-                      session.checkOutTime === null && styles.sessionDurationValueActive
-                    ]}>
-                      {formatTime(Math.floor(duration / 1000))}
-                    </Text>
-                  </View>
-
-                  {/* Click to view details indicator */}
-                  <View style={styles.clickIndicator}>
-                    <Text style={styles.clickIndicatorText}>{t('history.clickForDetails')}</Text>
-                  </View>
-
-                </TouchableOpacity>
-              );
-            })
-          )}
-        </View>
+        <View style={{ height: 100 }} />
       </ScrollView>
+
+      <Modal visible={sheetVisible} transparent animationType="fade" onRequestClose={() => setSheetVisible(false)}>
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity activeOpacity={1} style={styles.sheetBackdrop} onPress={() => setSheetVisible(false)} />
+          <View style={styles.sheetCard}>
+            <View style={styles.dragHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Set Filter Constraints</Text>
+              <TouchableOpacity onPress={() => setFilters(EMPTY_FILTER)}>
+                <Text style={styles.resetLabel}>Reset All</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.sheetBody}>
+              <Text style={styles.sheetFieldLabel}>Select Timeline Year</Text>
+              <View style={styles.pillsRow}>
+                {years.map((y) => {
+                  const active = filters.year === y.toString();
+                  return (
+                    <TouchableOpacity
+                      key={y}
+                      onPress={() => setFilters((prev) => ({ ...prev, year: active ? null : y.toString() }))}
+                      style={[styles.pill, active && styles.pillActivePurple]}
+                    >
+                      <Text style={[styles.pillText, active && styles.pillTextActivePurple]}>{y}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.sheetFieldLabel}>Select Month Parameters</Text>
+              <View style={styles.pillsRow}>
+                {MONTHS.map((m) => {
+                  const active = filters.month === m;
+                  return (
+                    <TouchableOpacity
+                      key={m}
+                      onPress={() => setFilters((prev) => ({ ...prev, month: active ? null : m }))}
+                      style={[styles.pill, active && styles.pillActivePurple]}
+                    >
+                      <Text style={[styles.pillText, active && styles.pillTextActivePurple]}>{m}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.sheetFieldLabel}>Target Specific Day</Text>
+              <View style={styles.dayBox}>
+                <TextInput
+                  style={styles.dayInput}
+                  placeholder="e.g. 26"
+                  placeholderTextColor={colorsMap.textFaint}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  value={filters.day || ''}
+                  onChangeText={(text) => setFilters((prev) => ({ ...prev, day: text || null }))}
+                />
+              </View>
+
+              <Text style={styles.sheetFieldLabel}>State Filtering</Text>
+              <View style={styles.statusGrid}>
+                <TouchableOpacity
+                  onPress={() => setFilters((prev) => ({ ...prev, status: prev.status === 'live' ? null : 'live' }))}
+                  style={[styles.pill, filters.status === 'live' && styles.pillActiveRed]}
+                >
+                  <View style={[styles.statusDot, filters.status === 'live' && styles.statusDotActive]} />
+                  <Text style={[styles.pillText, filters.status === 'live' && styles.pillTextActiveRed]}>Active Sessions</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setFilters((prev) => ({ ...prev, status: prev.status === 'completed' ? null : 'completed' }))}
+                  style={[styles.pill, filters.status === 'completed' && styles.pillActiveGreen]}
+                >
+                  <View style={[styles.statusDot, filters.status === 'completed' && styles.statusDotActiveGreen]} />
+                  <Text style={[styles.pillText, filters.status === 'completed' && styles.pillTextActiveGreen]}>Completed Tasks</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.applyButton} onPress={() => setSheetVisible(false)} activeOpacity={0.9}>
+              <Text style={styles.applyLabel}>Apply Timeline Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: colorsMap.bgMain },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { color: colorsMap.textMuted, fontSize: 14, fontWeight: '600' },
+  scrollView: { flex: 1 },
+  contentContainer: { padding: 16, paddingTop: 24 },
+  header: { marginBottom: 20, paddingHorizontal: 4 },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: colorsMap.white, letterSpacing: -0.3 },
+  headerSubtitle: { fontSize: 12, color: colorsMap.textMuted, fontWeight: '600', marginTop: 2 },
+  stickyBar: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  searchBox: {
     flex: 1,
-    backgroundColor: colors.bgMain,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: spacing.xl,
-    paddingTop: spacing.huge,
-    paddingBottom: 120, // Extra padding to ensure content is visible above tab bar
-  },
-
-  // ═══════════════════════════════════════════════════════════════
-  // HEADER SECTION
-  // ═══════════════════════════════════════════════════════════════
-  headerSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  headerIconContainer: {
-    width: 56,
-    height: 56,
+    backgroundColor: colorsMap.surfaceCard,
     borderRadius: 16,
-    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: colors.borderAccent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.lg,
-    ...shadows.neonGlowSubtle,
+    borderColor: colorsMap.borderMain,
+    paddingHorizontal: 14,
+    gap: 10,
   },
-  headerIconContainerRTL: {
-    marginRight: 0,
-    marginLeft: spacing.lg,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: fonts.sizes.hero,
-    fontWeight: '700' as const,
-    color: colors.textPrimary,
-    letterSpacing: -1,
-  },
-  subtitle: {
-    fontSize: fonts.sizes.md,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-
-  // ═══════════════════════════════════════════════════════════════
-  // SEARCH SECTION
-  // ═══════════════════════════════════════════════════════════════
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    ...shadows.glass,
-  },
-  searchIconContainer: {
-    marginRight: spacing.md,
-  },
-  searchIconContainerRTL: {
-    marginRight: 0,
-    marginLeft: spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: spacing.lg,
-    color: colors.textPrimary,
-    fontSize: fonts.sizes.md,
-  },
-
-  // ═══════════════════════════════════════════════════════════════
-  // FILTER SECTION
-  // ═══════════════════════════════════════════════════════════════
-  filterContainer: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
+  searchInput: { flex: 1, paddingVertical: 12, color: colorsMap.accentPurple, fontSize: 14, fontWeight: '700' },
   filterButton: {
-    flex: 1,
-    flexDirection: 'row',
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: colorsMap.surfaceCard,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.button,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.xs,
+    borderColor: colorsMap.borderMain,
   },
-  filterButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterButtonText: {
-    color: colors.textSecondary,
-    fontSize: fonts.sizes.sm,
-    fontWeight: '500' as const,
-  },
-  filterButtonTextActive: {
-    color: colors.bgMain,
-    fontWeight: '700' as const,
-  },
-  filterDotActive: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.primary,
-  },
-
-  // ═══════════════════════════════════════════════════════════════
-  // SUMMARY SECTION
-  // ═══════════════════════════════════════════════════════════════
-  summaryCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  summaryText: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  summaryHighlight: {
-    color: colors.primary,
-    fontWeight: '700' as const,
-  },
-
-  // ═══════════════════════════════════════════════════════════════
-  // SESSIONS LIST
-  // ═══════════════════════════════════════════════════════════════
-  sessionsContainer: {
-    gap: spacing.md,
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: spacing.xxl,
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: colors.bgElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  emptyStateTitle: {
-    fontSize: fonts.sizes.lg,
-    fontWeight: '600' as const,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  emptyStateSubtext: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-
-  // ═══════════════════════════════════════════════════════════════
-  // SESSION CARD
-  // ═══════════════════════════════════════════════════════════════
+  counterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 14 },
+  counterLabel: { fontSize: 10, fontWeight: '700', color: colorsMap.textFaint, letterSpacing: 0.8, textTransform: 'uppercase' },
+  timelineLabel: { fontSize: 12, fontWeight: '500', color: colorsMap.textMuted },
+  list: { gap: 14, paddingBottom: 40 },
   sessionCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.card,
-    padding: spacing.xl,
+    backgroundColor: colorsMap.surfaceCard,
+    borderRadius: 20,
+    padding: 20,
     borderWidth: 1,
-    borderColor: colors.border,
-    ...shadows.card,
+    borderColor: colorsMap.borderMain,
+    gap: 14,
   },
-  sessionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  sessionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sessionStatusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.textMuted,
-    marginRight: spacing.md,
-  },
-  sessionStatusDotRTL: {
-    marginRight: 0,
-    marginLeft: spacing.md,
-  },
-  sessionStatusDotActive: {
-    backgroundColor: colors.primary,
-    ...shadows.neonGlowSubtle,
-  },
-  sessionDate: {
-    fontSize: fonts.sizes.lg,
-    fontWeight: '600' as const,
-    color: colors.textPrimary,
-  },
-  sessionYear: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textSecondary,
-  },
-  sessionStatusBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.bgElevated,
-  },
-  sessionStatusBadgeActive: {
-    backgroundColor: 'rgba(0, 255, 136, 0.15)',
-  },
-  sessionStatusText: {
-    fontSize: fonts.sizes.xs,
-    color: colors.textSecondary,
-    fontWeight: '600' as const,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  sessionStatusTextActive: {
-    color: colors.primary,
-  },
-
-  // Session Times
-  sessionTimesContainer: {
-    marginBottom: spacing.lg,
-    gap: spacing.sm,
-  },
-  sessionTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  sessionTimeRowRTL: {
-    flexDirection: 'row-reverse',
-  },
-  sessionTimeLabel: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textMuted,
-    flex: 1,
-  },
-  sessionTimeLabelRTL: {
-    textAlign: 'right',
-  },
-  sessionTimeValue: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textSecondary,
-    fontWeight: '500' as const,
-  },
-  sessionTimeValueRTL: {
-    textAlign: 'left',
-  },
-
-  // Session Duration
-  sessionDurationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.bgElevated,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  sessionDurationLabel: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  sessionDurationValue: {
-    fontSize: fonts.sizes.xl,
-    fontWeight: '700' as const,
-    color: colors.textPrimary,
-    fontFamily: 'monospace',
-  },
-  sessionDurationValueActive: {
-    color: colors.primary,
-  },
-
-  // Click Indicator
-  clickIndicator: {
-    flexDirection: 'row',
+  sessionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  sessionHeaderLeft: { flex: 1, gap: 2 },
+  sessionDate: { fontSize: 14, fontWeight: '700', color: colorsMap.white },
+  sessionRecord: { fontSize: 10, fontFamily: 'monospace', color: colorsMap.textMuted, letterSpacing: 0.5 },
+  chevronCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colorsMap.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colorsMap.borderSubtle,
+  },
+  chevronCircleLive: { borderColor: 'rgba(251,70,76,0.35)' },
+  statsGrid: { flexDirection: 'row', gap: 10 },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.015)',
+    paddingVertical: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.04)',
+  },
+  statLabel: { fontSize: 9, fontWeight: '700', color: colorsMap.textFaint, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6, textAlign: 'center' },
+  statValue: { fontSize: 12, fontWeight: '700', color: colorsMap.white, textAlign: 'center', fontFamily: 'monospace' },
+  statValueMuted: { color: colorsMap.textMuted, fontStyle: 'italic', fontWeight: '500' },
+  statusLive: { color: colorsMap.statusRed },
+  statusCompleted: { color: colorsMap.statusGreen },
+  durationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  durationLeft: { flex: 1 },
+  durationTitle: { fontSize: 10, fontWeight: '700', color: colorsMap.textMuted, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 4 },
+  durationValue: { fontSize: 12, fontWeight: '700', color: colorsMap.white, fontFamily: 'monospace' },
+  durationValueLive: { color: colorsMap.statusRed },
+  progressTrack: { width: 120, height: 6, backgroundColor: colorsMap.surfaceAlt, borderRadius: 3, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  progressFill: { height: '100%', width: '100%' },
+  progressBar: { height: '100%', width: '100%', borderRadius: 3 },
+  progressBarLive: { backgroundColor: 'rgba(251,70,76,0.9)' },
+  progressBarCompleted: { backgroundColor: colorsMap.statusGreen },
+  emptyState: { alignItems: 'center', paddingVertical: 48, backgroundColor: colorsMap.surfaceCard, borderRadius: 20, borderWidth: 1, borderColor: colorsMap.borderMain },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: colorsMap.textMain, marginBottom: 6 },
+  emptySub: { fontSize: 13, color: colorsMap.textMuted },
+  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end' },
+  sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
+  sheetCard: {
+    backgroundColor: colorsMap.bgMain,
+    borderTopColor: colorsMap.borderMain,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 28,
+    maxHeight: 820,
   },
-  clickIndicatorText: {
-    fontSize: fonts.sizes.sm,
-    color: colors.primary,
-    fontWeight: '500' as const,
-  },
-
-  // Session Actions
-  sessionActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
+  dragHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: colorsMap.borderMain, alignSelf: 'center', marginBottom: 18 },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
+  sheetTitle: { fontSize: 15, fontWeight: '700', color: colorsMap.white, letterSpacing: -0.2 },
+  resetLabel: { fontSize: 11, fontWeight: '700', color: colorsMap.textFaint },
+  sheetBody: { gap: 16 },
+  sheetFieldLabel: { fontSize: 10, fontWeight: '700', color: colorsMap.textFaint, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 },
+  pillsRow: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, columnGap: 10 },
+  dayBox: { backgroundColor: colorsMap.surfaceAlt, borderRadius: 20, borderWidth: 1, borderColor: colorsMap.borderSubtle, paddingHorizontal: 14, paddingVertical: 12, maxWidth: 120 },
+  dayInput: { color: colorsMap.white, fontSize: 14, fontWeight: '700', fontFamily: 'monospace', textAlign: 'center', minWidth: 60 },
+  statusGrid: { flexDirection: 'row', gap: 12 },
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: colorsMap.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colorsMap.borderSubtle,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bgElevated,
-    borderRadius: borderRadius.button,
-    paddingVertical: spacing.md,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    minHeight: 44,
+    gap: 8,
+    flexDirection: 'row',
   },
-  actionButtonDanger: {
-    backgroundColor: 'rgba(255, 51, 102, 0.1)',
-    borderColor: 'rgba(255, 51, 102, 0.3)',
-  },
-  actionButtonText: {
-    fontSize: fonts.sizes.sm,
-    fontWeight: '600' as const,
-    color: colors.textSecondary,
-  },
-  actionButtonTextDanger: {
-    color: colors.danger,
-  },
+  pillActivePurple: { backgroundColor: 'rgba(139,108,239,0.10)', borderColor: 'rgba(163,116,249,0.30)' },
+  pillActiveRed: { backgroundColor: 'rgba(251,70,76,0.10)', borderColor: 'rgba(251,70,76,0.30)' },
+  pillActiveGreen: { backgroundColor: 'rgba(68,207,110,0.10)', borderColor: 'rgba(68,207,110,0.30)' },
+  pillText: { fontSize: 11, fontWeight: '700', color: colorsMap.textMuted },
+  pillTextActivePurple: { color: colorsMap.accentPurple },
+  pillTextActiveRed: { color: colorsMap.statusRed },
+  pillTextActiveGreen: { color: colorsMap.statusGreen },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colorsMap.textMuted },
+  statusDotActive: { backgroundColor: colorsMap.statusRed },
+  statusDotActiveGreen: { backgroundColor: colorsMap.statusGreen },
+  applyButton: { marginTop: 20, backgroundColor: colorsMap.accentPurple, borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
+  applyLabel: { fontSize: 14, fontWeight: '900', color: colorsMap.bgMain, letterSpacing: 0.2 },
 });
 
 export default HistoryScreen;
