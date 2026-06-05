@@ -240,6 +240,11 @@ export const Provider = ({ children }: AppProviderProps) => {
   const updateSessionReason = async (sessionId: string, reason: string): Promise<boolean> => {
     const session = appData.sessions.find((s) => s.sessionId === sessionId);
     if (!session) return false;
+    // Do not allow editing reason for an active session
+    if (session.checkOutTime === null) {
+      Alert.alert('Cannot Edit Active Session', 'Self assessment cannot be edited while the session is active.');
+      return false;
+    }
     const alreadyEdited = (session as any).reasonEditedAt != null;
     if (alreadyEdited) return false;
     const now = Date.now();

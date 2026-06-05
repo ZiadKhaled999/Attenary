@@ -164,8 +164,9 @@ interface SessionDetailsScreenProps {
 const SessionDetailsScreen: React.FC<SessionDetailsScreenProps> = ({ route }) => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { t, language } = useLanguage();
-  const { updateSessionReason } = useApp();
-  const { session } = route.params;
+  const { updateSessionReason, appData } = useApp();
+  const paramSession = route.params.session;
+  const session = appData.sessions.find((s: any) => s.sessionId === paramSession.sessionId) || paramSession;
 
   const [dims, setDims] = useState({ w: W0, h: H0 });
   useEffect(() => {
@@ -205,9 +206,7 @@ const SessionDetailsScreen: React.FC<SessionDetailsScreenProps> = ({ route }) =>
 
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(session.reason ?? '');
-  const [editedAt, setEditedAt] = useState<number | null>(
-    (session as any).reasonEditedAt ?? null
-  );
+  const [editedAt, setEditedAt] = useState<number | null>(((session as any).reasonEditedAt ?? null));
   const [saving, setSaving] = useState(false);
   const slide = useRef(new Animated.Value(H0)).current;
   const fade = useRef(new Animated.Value(0)).current;
@@ -220,8 +219,13 @@ const SessionDetailsScreen: React.FC<SessionDetailsScreenProps> = ({ route }) =>
     ]).start();
   }, [open]);
 
+  // keep editedAt in sync with the live session from context
+  useEffect(() => {
+    setEditedAt(((session as any).reasonEditedAt ?? null));
+  }, [session?.reasonEditedAt]);
+
   const show = () => {
-    if (editedAt !== null) return;
+    if (editedAt !== null || isActive) return;
     setText(session.reason ?? '');
     setOpen(true);
   };
@@ -403,16 +407,16 @@ const SessionDetailsScreen: React.FC<SessionDetailsScreenProps> = ({ route }) =>
                 </Text>
               )}
             </View>
-            {editedAt == null ? (
+            {editedAt == null && !isActive ? (
               <TouchableOpacity onPress={show} activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, backgroundColor: C.purpleSoft, borderRadius: 16, borderWidth: 1, borderColor: C.purpleBorder }}>
                 <EditIcon size={15} color={C.purple} />
                 <Text style={[{ fontSize: 13 * fontSizeScale, fontWeight: '700', color: C.purple, letterSpacing: 0.2 }]}>{t('sessiondetails.editAssessment')}</Text>
               </TouchableOpacity>
-            ) : (
+            ) : editedAt != null ? (
               <View style={{ alignItems: 'center', paddingVertical: 8 }}>
                 <Text style={[{ fontSize: 13 * fontSizeScale, fontWeight: '600', color: C.muted }]}>Assessment saved once</Text>
               </View>
-            )}
+            ) : null}
           </View>
         </View>
       </ScrollView>
