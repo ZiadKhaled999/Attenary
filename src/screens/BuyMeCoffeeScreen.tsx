@@ -22,12 +22,6 @@ const BackIcon = ({ size = 20 }: { size?: number }) => (
   </Svg>
 );
 
-const ExternalLinkIcon = ({ size = 16 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" stroke={colors.bgMain} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
-
 const BuyMeCoffeeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { t } = useLanguage();
@@ -35,7 +29,7 @@ const BuyMeCoffeeScreen = () => {
 
   const handleBuyCoffee = () => {
     const url = 'https://buymeacoffee.com/attenary';
-    
+
     Linking.canOpenURL(url).then(supported => {
       if (supported) {
         Linking.openURL(url);
@@ -99,10 +93,10 @@ const BuyMeCoffeeScreen = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bgMain} />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
@@ -113,7 +107,7 @@ const BuyMeCoffeeScreen = () => {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -136,7 +130,7 @@ const BuyMeCoffeeScreen = () => {
           <Text style={styles.sectionLabel}>{t('buymecoffee.whySupport')}</Text>
           <View style={styles.benefitsCard}>
             {benefits.map((benefit, index) => (
-              <View 
+              <View
                 key={index}
                 style={[
                   styles.benefitRow,
@@ -168,13 +162,20 @@ const BuyMeCoffeeScreen = () => {
                   onPress={() => setSelectedOption(option.id as any)}
                   activeOpacity={0.85}
                 >
-                  <View style={styles.optionIconBox}>
+                  <View style={[
+                    styles.optionIconBox,
+                    isActive && styles.optionIconBoxActive,
+                  ]}>
                     <Text style={styles.optionEmoji}>{option.icon}</Text>
                   </View>
                   <View style={styles.optionBody}>
-                    <Text style={styles.optionTitle}>{option.title}</Text>
+                    <Text style={[
+                      styles.optionTitle,
+                      isActive && styles.optionTitleActive,
+                    ]}>{option.title}</Text>
                     <Text style={styles.optionDescription}>{option.description}</Text>
                   </View>
+                  {isActive && <View style={styles.activeIndicator} />}
                 </TouchableOpacity>
               );
             })}
@@ -183,13 +184,13 @@ const BuyMeCoffeeScreen = () => {
 
         {/* CTA Button */}
         <View style={styles.section}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.ctaButton}
             onPress={handleAction}
             activeOpacity={0.8}
           >
             <Text style={styles.ctaLabel}>{ctaLabel}</Text>
-            <ExternalLinkIcon size={16} />
+            <Text style={styles.ctaArrow}>→</Text>
           </TouchableOpacity>
         </View>
 
@@ -228,9 +229,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.base10,
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -261,11 +262,11 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: borderRadius.full,
     borderWidth: 2,
-    borderColor: colors.textAccent,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
-    ...shadows.accentGlow,
+    ...shadows.card,
   },
   heroIconInner: {
     width: 88,
@@ -309,10 +310,10 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   benefitsCard: {
-    backgroundColor: 'rgba(36,36,36,0.7)',
+    backgroundColor: colors.bgCard,
     borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(168,130,255,0.2)',
+    borderColor: colors.border,
     padding: spacing.md,
     overflow: 'hidden',
   },
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: borderRadius.sm,
-    backgroundColor: 'rgba(168,130,255,0.1)',
+    backgroundColor: colors.bgSecondary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -355,22 +356,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgCard,
     borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: colors.border,
     padding: spacing.lg,
-    borderLeftWidth: 3,
-    borderLeftColor: 'transparent',
+    position: 'relative',
+    overflow: 'hidden',
   },
   optionCardActive: {
-    backgroundColor: 'rgba(168,130,255,0.08)',
-    borderLeftColor: colors.textAccent,
+    backgroundColor: colors.bgSecondary,
+    borderColor: colors.borderLight,
   },
   optionIconBox: {
     width: 40,
     height: 40,
     borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: colors.bgElevated,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  optionIconBoxActive: {
+    backgroundColor: colors.bgCard,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   optionEmoji: {
     fontSize: fonts.sizes.lg,
@@ -384,21 +390,34 @@ const styles = StyleSheet.create({
     fontWeight: fonts.weights.bold as any,
     color: colors.textPrimary,
   },
+  optionTitleActive: {
+    color: colors.textAccent,
+  },
   optionDescription: {
     fontSize: fonts.sizes.sm,
     color: colors.textMuted,
     lineHeight: 20,
     fontWeight: fonts.weights.medium as any,
   },
+  activeIndicator: {
+    position: 'absolute',
+    left: 0,
+    top: 12,
+    bottom: 12,
+    width: 3,
+    backgroundColor: colors.primary,
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+  },
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     borderRadius: borderRadius.xxl,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xxl,
-    ...shadows.accentGlow,
+    ...shadows.button,
     gap: spacing.sm,
   },
   ctaLabel: {
@@ -407,17 +426,22 @@ const styles = StyleSheet.create({
     color: colors.bgMain,
     letterSpacing: 0.2,
   },
+  ctaArrow: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.bgMain,
+  },
   messageCard: {
-    backgroundColor: 'rgba(168,130,255,0.08)',
+    backgroundColor: colors.bgCard,
     borderRadius: borderRadius.card,
     borderWidth: 1,
-    borderColor: 'rgba(168,130,255,0.2)',
+    borderColor: colors.border,
     padding: spacing.lg,
     marginBottom: spacing.lg,
   },
   messageText: {
     fontSize: fonts.sizes.md,
-    color: colors.textAccent,
+    color: colors.textPrimary,
     textAlign: 'center',
     lineHeight: 22,
     fontWeight: fonts.weights.medium as any,

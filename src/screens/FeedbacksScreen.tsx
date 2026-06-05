@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import {
   Platform,
   Dimensions,
   ActivityIndicator,
+  Animated,
+  Image,
+  Easing,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,11 +23,7 @@ import Svg, { Path } from 'react-native-svg';
 import { useSupabase } from '../context/SupabaseContext';
 import { useLanguage } from '../context/LanguageContext';
 
-const SendIcon = ({ size = 18 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" stroke={colors.bgMain} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const BackIcon = ({ size = 20 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -32,11 +31,33 @@ const BackIcon = ({ size = 20 }: { size?: number }) => (
   </Svg>
 );
 
-const FeedbackIcon = ({ size = 36 }: { size?: number }) => (
+const SendIcon = ({ size = 18 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" stroke={colors.textAccent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" stroke={colors.bgMain} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
+
+const FeedbacksIcon = ({ size = 36 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/feedback.png')} style={{ width: size, height: size }} resizeMode="contain" />
+);
+
+const EmailFieldIcon = ({ size = 18 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/email.png')} style={{ width: size, height: size }} resizeMode="contain" />
+);
+
+const CheckIcon = ({ size = 16, color = colors.primary }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M9 12l2 2 4-4" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const feedbackTypes = [
+  { id: 'general', labelKey: 'feedbacks.general', descriptionKey: 'feedbacks.generalDesc' },
+  { id: 'bug', labelKey: 'feedbacks.bugReport', descriptionKey: 'feedbacks.bugDesc' },
+  { id: 'feature', labelKey: 'feedbacks.featureRequest', descriptionKey: 'feedbacks.featureDesc' },
+] as const;
+
+type FeedbackType = typeof feedbackTypes[number]['id'];
 
 const FeedbacksScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -44,10 +65,38 @@ const FeedbacksScreen = () => {
   const { profile, createFeedback } = useSupabase();
   const [feedback, setFeedback] = useState('');
   const [email, setEmail] = useState('');
-  const [feedbackType, setFeedbackType] = useState<'general' | 'bug' | 'feature'>('general');
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>('general');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [retryAttempts, setRetryAttempts] = useState(0);
+  const [typeSheetVisible, setTypeSheetVisible] = useState(false);
   const MAX_RETRY_ATTEMPTS = 3;
+
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const openSheet = () => {
+    setTypeSheetVisible(true);
+    slideAnim.setValue(0);
+    Animated.timing(slideAnim, {
+      toValue: 1,
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeSheet = () => {
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => setTypeSheetVisible(false));
+  };
+
+  const selectType = (type: FeedbackType) => {
+    setFeedbackType(type);
+    closeSheet();
+  };
 
   const isValidEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -137,11 +186,7 @@ const FeedbacksScreen = () => {
     }
   };
 
-  const feedbackTypes = [
-    { id: 'general', label: t('feedbacks.general') },
-    { id: 'bug', label: t('feedbacks.bugReport') },
-    { id: 'feature', label: t('feedbacks.featureRequest') },
-  ];
+  const selectedType = feedbackTypes.find(f => f.id === feedbackType)!;
 
   return (
     <View style={styles.container}>
@@ -172,7 +217,7 @@ const FeedbacksScreen = () => {
           {/* Icon Section */}
           <View style={styles.iconSection}>
             <View style={styles.iconContainer}>
-              <FeedbackIcon size={36} />
+              <FeedbacksIcon size={36} />
             </View>
             <Text style={styles.title}>{t('feedbacks.weValueYourFeedback')}</Text>
             <Text style={styles.subtitle}>
@@ -183,44 +228,37 @@ const FeedbacksScreen = () => {
           {/* Feedback Type Selection */}
           <View style={styles.section}>
             <Text style={styles.label}>{t('feedbacks.feedbackType')}</Text>
-            <View style={styles.typeGrid}>
-              {feedbackTypes.map((type) => {
-                const isActive = feedbackType === type.id;
-                return (
-                  <TouchableOpacity
-                    key={type.id}
-                    style={[
-                      styles.typeButton,
-                      isActive && styles.typeButtonActive,
-                    ]}
-                    onPress={() => setFeedbackType(type.id as any)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={[
-                      styles.typeButtonText,
-                      isActive && styles.typeButtonTextActive,
-                    ]}>
-                      {type.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <TouchableOpacity
+              style={styles.typeSelector}
+              onPress={openSheet}
+              activeOpacity={0.7}
+            >
+              <View style={styles.typeSelectorLeft}>
+                <View style={styles.typeDot} />
+                <Text style={styles.typeSelectorText}>{t(selectedType.labelKey)}</Text>
+              </View>
+              <Text style={styles.typeSelectorArrow}>›</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Email Input */}
           <View style={styles.section}>
             <Text style={styles.label}>{t('feedbacks.email')}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={t('feedbacks.emailPlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+            <View style={styles.inputWithIcon}>
+              <View style={styles.inputIconContainer}>
+                <EmailFieldIcon size={16} />
+              </View>
+              <TextInput
+                style={styles.inputWithIconInner}
+                placeholder={t('feedbacks.emailPlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
           </View>
 
           {/* Feedback Input */}
@@ -261,6 +299,70 @@ const FeedbacksScreen = () => {
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Type Selection Bottom Sheet */}
+      {typeSheetVisible && (
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={closeSheet} />
+          <Animated.View
+            style={[
+              styles.sheetContent,
+              {
+                transform: [{
+                  translateY: slideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [SCREEN_HEIGHT * 0.4, 0],
+                  }),
+                }, {
+                  scale: slideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.94, 1],
+                  }),
+                }],
+                opacity: slideAnim,
+              },
+            ]}
+          >
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>{t('feedbacks.selectType')}</Text>
+            <View style={styles.sheetOptions}>
+              {feedbackTypes.map((type) => {
+                const isActive = feedbackType === type.id;
+                return (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={[
+                      styles.sheetOption,
+                      isActive && styles.sheetOptionActive,
+                    ]}
+                    onPress={() => selectType(type.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.sheetOptionLeft}>
+                      <View style={[
+                        styles.sheetOptionDot,
+                        isActive && styles.sheetOptionDotActive,
+                      ]} />
+                      <View>
+                        <Text style={[
+                          styles.sheetOptionLabel,
+                          isActive && styles.sheetOptionLabelActive,
+                        ]}>{t(type.labelKey)}</Text>
+                        <Text style={styles.sheetOptionDesc}>{t(type.descriptionKey)}</Text>
+                      </View>
+                    </View>
+                    {isActive && (
+                      <View style={styles.sheetCheckMark}>
+                        <CheckIcon size={16} color={colors.primary} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Animated.View>
+        </View>
+      )}
     </View>
   );
 };
@@ -281,10 +383,10 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.base10,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -316,11 +418,11 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xxl,
     backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
-    ...shadows.accentGlowSubtle,
+    ...shadows.card,
   },
   title: {
     fontSize: fonts.sizes.xxl,
@@ -349,37 +451,61 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginLeft: spacing.xs,
   },
-  typeGrid: {
+  typeSelector: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.bgCard,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
-  typeButton: {
+  typeSelectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  typeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  typeSelectorText: {
+    fontSize: fonts.sizes.md,
+    fontWeight: fonts.weights.semibold as any,
+    color: colors.textPrimary,
+  },
+  typeSelectorArrow: {
+    fontSize: 22,
+    fontWeight: '300',
+    color: colors.textMuted,
+  },
+  inputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgCard,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+  },
+  inputIconContainer: {
+    marginRight: spacing.sm,
+  },
+  inputWithIconInner: {
     flex: 1,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.xl,
-    backgroundColor: 'rgba(36,36,36,0.7)',
-    borderWidth: 1,
-    borderColor: 'rgba(54,54,54,0.6)',
-    alignItems: 'center',
-  },
-  typeButtonActive: {
-    backgroundColor: 'rgba(168,130,255,0.12)',
-    borderColor: colors.textAccent,
-  },
-  typeButtonText: {
-    fontSize: fonts.sizes.sm,
-    fontWeight: fonts.weights.bold as any,
-    color: colors.textSecondary,
-  },
-  typeButtonTextActive: {
-    color: colors.textAccent,
+    fontSize: fonts.sizes.md,
+    color: colors.textPrimary,
   },
   input: {
     backgroundColor: colors.bgCard,
     borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(54,54,54,0.6)',
+    borderColor: colors.border,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontSize: fonts.sizes.md,
@@ -393,12 +519,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     borderRadius: borderRadius.xxl,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xxl,
     marginTop: spacing.sm,
-    ...shadows.accentGlow,
+    ...shadows.button,
   },
   submitButtonDisabled: {
     opacity: 0.7,
@@ -415,6 +541,100 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xl,
     lineHeight: 20,
+  },
+  sheetOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+    justifyContent: 'flex-end',
+  },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.overlay,
+  },
+  sheetContent: {
+    backgroundColor: colors.bgCard,
+    borderTopLeftRadius: borderRadius.xxl,
+    borderTopRightRadius: borderRadius.xxl,
+    padding: spacing.xxl,
+    paddingBottom: spacing.xxxl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.glassElevated,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: spacing.lg,
+  },
+  sheetTitle: {
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.bold as any,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+  sheetOptions: {
+    gap: spacing.sm,
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.bgElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sheetOptionActive: {
+    backgroundColor: colors.bgSecondary,
+    borderColor: colors.borderLight,
+  },
+  sheetOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  sheetOptionDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.border,
+  },
+  sheetOptionDotActive: {
+    backgroundColor: colors.primary,
+  },
+  sheetOptionLabel: {
+    fontSize: fonts.sizes.md,
+    fontWeight: fonts.weights.bold as any,
+    color: colors.textSecondary,
+  },
+  sheetOptionLabelActive: {
+    color: colors.textPrimary,
+  },
+  sheetOptionDesc: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textMuted,
+    fontWeight: fonts.weights.medium as any,
+    marginTop: 2,
+  },
+  sheetCheckMark: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.bgSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
 });
 

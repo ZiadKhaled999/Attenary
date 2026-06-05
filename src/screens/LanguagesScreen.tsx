@@ -6,12 +6,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   StatusBar,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Svg, { Path } from 'react-native-svg';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 import { useLanguage, Language } from '../context/LanguageContext';
+import Svg, { Path } from 'react-native-svg';
 
 const BackIcon = ({ size = 20 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -19,16 +20,24 @@ const BackIcon = ({ size = 20 }: { size?: number }) => (
   </Svg>
 );
 
-const CheckIcon = ({ size = 18, color = colors.textAccent }: { size?: number; color?: string }) => (
+const CheckIcon = ({ size = 18, color = colors.primary }: { size?: number; color?: string }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="m4.5 12.75 6 6 9-13.5" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
-const RefreshIcon = ({ size = 20, color = colors.textAccent }: { size?: number; color?: string }) => (
+const RefreshIcon = ({ size = 20, color = colors.primary }: { size?: number; color?: string }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-.132-8.314-.366m16.628 0c-.552 1.675-2.053 2.924-3.864 3.255m-9.622-3.255A11.952 11.952 0 0 0 12 13.5c1.884 0 3.654-.143 5.314-.416m-10.628 0c.552 1.675 2.053 2.924 3.864 3.255" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
+);
+
+const EnglishFlag = ({ size = 44 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/english.png')} style={{ width: size, height: size }} resizeMode="contain" />
+);
+
+const ArabicFlag = ({ size = 44 }: { size?: number }) => (
+  <Image source={require('../../assets/icons/arabic.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
 interface LanguageOption {
@@ -36,6 +45,7 @@ interface LanguageOption {
   name: string;
   subtitle: string;
   label: string;
+  FlagComponent: React.FC<{ size?: number }>;
 }
 
 const languageOptions: LanguageOption[] = [
@@ -43,13 +53,15 @@ const languageOptions: LanguageOption[] = [
     code: 'en',
     name: 'English',
     subtitle: 'Left to right (LTR)',
-    label: 'US',
+    label: 'EN',
+    FlagComponent: EnglishFlag,
   },
   {
     code: 'ar',
     name: 'العربية',
     subtitle: 'Right to left (RTL)',
-    label: 'SA',
+    label: 'AR',
+    FlagComponent: ArabicFlag,
   },
 ];
 
@@ -71,7 +83,7 @@ const LanguagesScreen = () => {
 
       {/* Navigation Header */}
       <View style={styles.navSection}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={handleGoBack}
           activeOpacity={0.7}
@@ -86,7 +98,7 @@ const LanguagesScreen = () => {
       </View>
 
       {/* Language Selector */}
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -109,10 +121,7 @@ const LanguagesScreen = () => {
                     styles.flagBox,
                     isSelected && styles.flagBoxActive,
                   ]}>
-                    <Text style={[
-                      styles.flagText,
-                      isSelected && styles.flagTextActive,
-                    ]}>{option.label}</Text>
+                    <option.FlagComponent size={28} />
                   </View>
                   <View style={styles.languageInfo}>
                     <View style={styles.nameRow}>
@@ -132,7 +141,7 @@ const LanguagesScreen = () => {
                   </View>
                 </View>
                 {isSelected && (
-                  <CheckIcon size={18} color={colors.textAccent} />
+                  <CheckIcon size={18} color={colors.primary} />
                 )}
               </TouchableOpacity>
             );
@@ -142,10 +151,10 @@ const LanguagesScreen = () => {
         {/* Info Callout */}
         <View style={styles.infoCard}>
           <View style={styles.infoIcon}>
-            <RefreshIcon size={20} color={colors.textAccent} />
+            <RefreshIcon size={20} color={colors.primary} />
           </View>
           <Text style={styles.infoText}>
-            {currentLanguage === 'ar' 
+            {currentLanguage === 'ar'
               ? 'سيؤدي تغيير اللغة إلى إعادة تحميل التطبيق لتطبيق التغييرات.'
               : 'Changing language will reload the app to apply the changes.'}
           </Text>
@@ -173,9 +182,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.base10,
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -203,12 +212,12 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.huge,
   },
   listCard: {
-    backgroundColor: 'rgba(36,36,36,0.7)',
+    backgroundColor: colors.bgCard,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(54,54,54,0.4)',
+    borderColor: colors.border,
     overflow: 'hidden',
-    ...shadows.glass,
+    ...shadows.card,
   },
   languageRow: {
     flexDirection: 'row',
@@ -217,10 +226,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
+    borderBottomColor: colors.border,
   },
   languageRowActive: {
-    backgroundColor: colors.base20,
+    backgroundColor: colors.bgSecondary,
   },
   rowLeft: {
     flexDirection: 'row',
@@ -229,28 +238,20 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   flagBox: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: borderRadius.lg,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: colors.bgElevated,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(54,54,54,0.5)',
+    borderColor: colors.border,
+    overflow: 'hidden',
   },
   flagBoxActive: {
-    backgroundColor: 'rgba(168,130,255,0.08)',
-    borderColor: 'rgba(168,130,255,0.25)',
-  },
-  flagText: {
-    fontSize: fonts.sizes.sm,
-    fontWeight: fonts.weights.bold as any,
-    color: colors.textMuted,
-    letterSpacing: 0.5,
-  },
-  flagTextActive: {
-    color: colors.textAccent,
+    backgroundColor: colors.bgCard,
+    borderColor: colors.borderLight,
   },
   languageInfo: {
     flex: 1,
@@ -267,18 +268,20 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   languageNameActive: {
-    color: colors.textAccent,
+    color: colors.primary,
   },
   currentBadge: {
-    backgroundColor: 'rgba(168,130,255,0.12)',
+    backgroundColor: colors.bgSecondary,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   currentBadgeText: {
     fontSize: fonts.sizes.xxs,
     fontWeight: fonts.weights.bold as any,
-    color: colors.textAccent,
+    color: colors.primary,
     letterSpacing: 0.5,
   },
   languageSubtitle: {
@@ -289,9 +292,9 @@ const styles = StyleSheet.create({
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(168,130,255,0.05)',
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: 'rgba(168,130,255,0.25)',
+    borderColor: colors.border,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     marginTop: spacing.xl,
@@ -301,14 +304,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(168,130,255,0.08)',
+    backgroundColor: colors.bgSecondary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   infoText: {
     flex: 1,
     fontSize: fonts.sizes.sm,
-    color: colors.textAccent,
+    color: colors.textSecondary,
     fontWeight: fonts.weights.medium as any,
     lineHeight: 20,
   },

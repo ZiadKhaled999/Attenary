@@ -1,59 +1,36 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Platform, Alert, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
-import Svg, { Path } from 'react-native-svg';
 import { useLanguage } from '../context/LanguageContext';
 import * as Sharing from 'expo-sharing';
 
 const ChevronRightIcon = ({ size = 20 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="m8.25 4.5 7.5 7.5-7.5 7.5" stroke={colors.textFaint} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
+  <Text style={{ fontSize: size, color: colors.textFaint, fontWeight: '600' }}>›</Text>
 );
 
-// Feedbacks Icon (Message/Chat)
 const FeedbacksIcon = ({ size = 20 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
+  <Image source={require('../../assets/icons/feedback.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
-// Languages Icon (Globe)
 const LanguagesIcon = ({ size = 20 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M10.5 21a7.5 7.5 0 0 0 7.5-7.5h-7.5V21Z" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M4.5 10.5H12V3a7.5 7.5 0 0 0-7.5 7.5Z" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M10.5 13.5V21a7.5 7.5 0 0 1-7.5-7.5h7.5Z" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
+  <Image source={require('../../assets/icons/Language.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
-// Backup Icon (Sync/Refresh)
 const BackupIcon = ({ size = 20 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
+  <Image source={require('../../assets/icons/export.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
-// Restore Icon (Download)
 const RestoreIcon = ({ size = 20 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
+  <Image source={require('../../assets/icons/import.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
-// Coffee Icon
 const CoffeeIcon = ({ size = 20 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M9.813 15.904L9 21h6l-.813-5.096M21 12h-3.14m-12.72 0H2M16.5 6a4.5 4.5 0 0 1-9 0m9 0A4.5 4.5 0 0 0 12 1.5 4.5 4.5 0 0 0 7.5 6m9 0v6a4.5 4.5 0 0 1-9 0V6" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
+  <Image source={require('../../assets/icons/buymeacoffee.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
 const ShareIcon = ({ size = 20 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
+  <Image source={require('../../assets/icons/analytics.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
 const MoreScreen = () => {
