@@ -1,9 +1,10 @@
-import * as React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Platform, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 import Svg, { Path } from 'react-native-svg';
 import { useLanguage } from '../context/LanguageContext';
+import * as Sharing from 'expo-sharing';
 
 const ChevronRightIcon = ({ size = 20 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -49,9 +50,47 @@ const CoffeeIcon = ({ size = 20 }: { size?: number }) => (
   </Svg>
 );
 
+const ShareIcon = ({ size = 20 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 const MoreScreen = () => {
   const navigation = useNavigation<any>();
   const { t } = useLanguage();
+
+  const handleShare = async () => {
+    try {
+      const appUrl = 'https://www.attenary.com';
+      const message = Platform.select({
+        web: 'Check out Attenary, the modern time tracking app!',
+        default: 'Attenary - Time Tracking Made Simple',
+      });
+
+      if (Platform.OS === 'web') {
+        const shareData = { title: 'Attenary', text: message as string, url: appUrl };
+        if (navigator.share) {
+          await navigator.share(shareData);
+        } else {
+          await navigator.clipboard.writeText(appUrl);
+          Alert.alert(t('common.success'), 'Link copied to clipboard!');
+        }
+      } else {
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(appUrl, {
+            dialogTitle: t('more.share'),
+            mimeType: 'text/plain',
+          });
+        } else {
+          Alert.alert(t('common.success'), 'Sharing not available on this device.');
+        }
+      }
+    } catch (e) {
+      console.log('Share error:', e);
+    }
+  };
 
   const navItems = [
     {
@@ -89,10 +128,19 @@ const MoreScreen = () => {
       icon: <CoffeeIcon size={20} />,
       screen: 'BuyMeCoffee',
     },
+    {
+      id: 'share',
+      title: t('more.share'),
+      subtitle: t('more.shareSubtitle'),
+      icon: <ShareIcon size={20} />,
+      onPress: handleShare,
+    },
   ];
 
   const handlePress = (item: any) => {
-    if (item.screen) {
+    if (item.onPress) {
+      item.onPress();
+    } else if (item.screen) {
       navigation.navigate(item.screen as never);
     }
   };

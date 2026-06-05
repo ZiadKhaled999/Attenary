@@ -164,7 +164,7 @@ const BackupScreen = () => {
               </View>
             </View>
             <View style={[styles.detailBadge, styles.detailBadgeAccent]}>
-              <Text style={[styles.detailBadgeText, styles.detailBadgeTextAccent]}>AES-256</Text>
+              <Text style={[styles.detailBadgeText, styles.detailBadgeTextAccent]}>OS-Managed</Text>
             </View>
           </View>
         </View>
