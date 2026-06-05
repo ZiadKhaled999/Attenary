@@ -22,6 +22,7 @@ interface AppContextType {
   resetOnboardingProgress: () => Promise<void>;
   clearStorageError: () => void;
   deleteSession: (sessionId: string) => Promise<boolean>;
+  updateSessionReason: (sessionId: string, reason: string) => Promise<boolean>;
   createBackup: () => Promise<BackupSchema>;
   saveBackup: (backup: BackupSchema) => Promise<{ fileName: string; size: number } | null>;
   getStoredBackup: () => Promise<BackupSchema | null>;
@@ -164,7 +165,7 @@ export const Provider = ({ children }: AppProviderProps) => {
 
   const checkIn = async () => {
     const sessionId = Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
-    const session: Session = { sessionId, checkInTime: Date.now(), checkOutTime: null, reason: null };
+    const session: Session = { sessionId, checkInTime: Date.now(), checkOutTime: null, reason: null, reasonEditedAt: null };
     setAppData((prev) => ({ ...prev, sessions: [...prev.sessions, session] }));
     await saveData();
   };
@@ -234,6 +235,34 @@ export const Provider = ({ children }: AppProviderProps) => {
     setAppData((prev) => ({ ...prev, sessions: [...prev.sessions, sessionToDelete] }));
     Alert.alert('Error', 'Failed to save changes. Session not deleted.');
     return false;
+  };
+
+  const updateSessionReason = async (sessionId: string, reason: string): Promise<boolean> => {
+    const session = appData.sessions.find((s) => s.sessionId === sessionId);
+    if (!session) return false;
+    const alreadyEdited = (session as any).reasonEditedAt != null;
+    if (alreadyEdited) return false;
+    const now = Date.now();
+    setAppData((prev) => ({
+      ...prev,
+      sessions: prev.sessions.map((s) =>
+        s.sessionId === sessionId ? { ...s, reason, reasonEditedAt: now } : s,
+      ),
+    }));
+    const success = await saveData();
+    if (!success) {
+      setAppData((prev) => ({
+        ...prev,
+        sessions: prev.sessions.map((s) =>
+          s.sessionId === sessionId
+            ? { ...s, reason: session.reason ?? null, reasonEditedAt: (session as any).reasonEditedAt ?? null }
+            : s,
+        ),
+      }));
+      Alert.alert('Error', 'Failed to save changes.');
+      return false;
+    }
+    return true;
   };
 
   const createBackup = async (): Promise<BackupSchema> => {
@@ -419,7 +448,7 @@ export const Provider = ({ children }: AppProviderProps) => {
     saveData, loadData, checkIn, checkOut,
     setEmployeeName, setEmail, setJobTitle, setDepartment,
     addSessions, completeOnboarding, updateOnboardingProgress, resetOnboardingProgress,
-    clearStorageError, deleteSession,
+    clearStorageError, deleteSession, updateSessionReason,
     createBackup, saveBackup, getStoredBackup,
     importBackupFromFile, previewImport, restoreBackup,
   };

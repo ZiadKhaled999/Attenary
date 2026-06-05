@@ -23,6 +23,7 @@ const rowToSession = (row: any): Session => ({
   checkInTime: row.check_in_time,
   checkOutTime: row.check_out_time ?? null,
   reason: row.reason ?? null,
+  reasonEditedAt: row.reason_edited_at ?? null,
 });
 
 const rowToSync = (row: any): SyncQueueItem => ({
@@ -59,6 +60,7 @@ const init = async (db: SQLite.SQLiteDatabase) => {
       check_in_time INTEGER NOT NULL,
       check_out_time INTEGER,
       reason TEXT,
+      reason_edited_at INTEGER,
       created_at INTEGER,
       updated_at INTEGER
     );
@@ -78,7 +80,12 @@ const init = async (db: SQLite.SQLiteDatabase) => {
     CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_sync_queue_pending ON sync_queue(user_id, processed_at);
   `);
-};
+  try {
+    await db.runAsync(`ALTER TABLE sessions ADD COLUMN reason_edited_at INTEGER`);
+  } catch {
+    // column already exists — ignore
+  }
+}
 
 export interface Database {
   profiles: {
@@ -145,11 +152,12 @@ export const openDb = async (): Promise<Database> => {
       },
       put: async (session: Session) => {
         await db.runAsync(
-          `INSERT INTO sessions (id, user_id, check_in_time, check_out_time, reason, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
+          `INSERT INTO sessions (id, user_id, check_in_time, check_out_time, reason, reason_edited_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET
              check_out_time = excluded.check_out_time,
              reason = excluded.reason,
+             reason_edited_at = excluded.reason_edited_at,
              updated_at = excluded.updated_at`,
           [
             session.sessionId,
@@ -157,6 +165,7 @@ export const openDb = async (): Promise<Database> => {
             session.checkInTime,
             session.checkOutTime,
             session.reason ?? null,
+            session.reasonEditedAt ?? null,
             session.checkInTime,
             session.checkOutTime ?? session.checkInTime,
           ]

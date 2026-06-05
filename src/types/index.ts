@@ -3,6 +3,7 @@ export interface Session {
   checkInTime: number;
   checkOutTime: number | null;
   reason: string | null;
+  reasonEditedAt: number | null | undefined;
 }
 
 export interface AppData {

@@ -369,6 +369,12 @@ const translations: Record<Language, Record<string, string>> = {
     'sessiondetails.active': 'Active Session',
     'sessiondetails.completed': 'Completed',
     'sessiondetails.sessionStillActive': 'Session still active',
+    'sessiondetails.editAssessment': 'Edit Self Assessment',
+    'sessiondetails.assessmentTitle': 'Write Self Assessment',
+    'sessiondetails.assessmentSubtitle': 'Provide details or context regarding this quick check-out session.',
+    'sessiondetails.placeholder': 'Type your assessment reason here...',
+    'sessiondetails.cancel': 'Cancel',
+    'sessiondetails.saveAssessment': 'Save Assessment',
     
     // Check In/Out Modals
     'modal.checkInTitle': 'Check In',
@@ -701,6 +707,12 @@ const translations: Record<Language, Record<string, string>> = {
     'sessiondetails.active': 'جلسة نشطة',
     'sessiondetails.completed': 'مكتملة',
     'sessiondetails.sessionStillActive': 'الجلسة لا تزال نشطة',
+    'sessiondetails.editAssessment': 'تعديل التقييم الذاتي',
+    'sessiondetails.assessmentTitle': 'كتابة التقييم الذاتي',
+    'sessiondetails.assessmentSubtitle': 'قدم تفاصيل أو سياقاً حول جلسة تسجيل الخروج السريع هذه.',
+    'sessiondetails.placeholder': 'اكتب سبب التقييم هنا...',
+    'sessiondetails.cancel': 'إلغاء',
+    'sessiondetails.saveAssessment': 'حفظ التقييم',
     
     // Backup Screen
     'backup.infoText': 'يتم حفظ النسخة الاحتياطية على جهازك وتخزينها محليًا. يحتوي على جميع جلساتك وملفك الشخصي وإعداداتك.',
