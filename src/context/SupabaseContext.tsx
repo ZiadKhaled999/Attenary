@@ -133,6 +133,7 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
           email: updatedProfile.email,
           job_title: updatedProfile.job_title,
           department: updatedProfile.department,
+          avatar_url: updatedProfile.avatar_url,
         };
         const { error } = await supabase
           .from('profiles')
@@ -255,9 +256,22 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
       if (isOnline && supabase) {
         // For web compatibility - upload avatar to storage if provided
         let finalAvatarUrl = data.avatar_url;
-        if (data.avatar_url && (Platform.OS === 'web' || data.avatar_url.startsWith('file://') === false)) {
+        if (data.avatar_url && Platform.OS === 'web') {
           try {
-            if (Platform.OS === 'web' && data.avatar_url.startsWith('http')) {
+            if (data.avatar_url.startsWith('http')) {
+              const path = `avatars/${data.id}-${Date.now()}.jpg`;
+              const response = await fetch(data.avatar_url);
+              const blob = await response.blob();
+              
+              const { error: uploadError } = await supabase.storage
+                .from('profile-photos')
+                .upload(path, blob, { upsert: true });
+              
+              if (!uploadError) {
+                const { data: urlData } = supabase.storage.from('profile-photos').getPublicUrl(path);
+                finalAvatarUrl = urlData?.publicUrl;
+              }
+            } else if (data.avatar_url.startsWith('file://')) {
               const path = `avatars/${data.id}-${Date.now()}.jpg`;
               const response = await fetch(data.avatar_url);
               const blob = await response.blob();

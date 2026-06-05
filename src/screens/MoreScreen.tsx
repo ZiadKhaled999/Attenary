@@ -39,7 +39,7 @@ const MoreScreen = () => {
 
   const handleShare = async () => {
     try {
-      const appUrl = 'https://www.attenary.com';
+      const appUrl = 'https://attenary.pages.dev/';
       const message = Platform.select({
         web: 'Check out Attenary, the modern time tracking app!',
         default: 'Attenary - Time Tracking Made Simple',
@@ -154,11 +154,6 @@ const MoreScreen = () => {
             </TouchableOpacity>
           ))}
         </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Attenary</Text>
-          <Text style={styles.footerSubtext}>Time Tracking Made Simple</Text>
-        </View>
       </ScrollView>
     </View>
   );
@@ -172,21 +167,20 @@ const styles = StyleSheet.create({
   content: { 
     flex: 1 
   },
-  scrollContent: { 
-    paddingHorizontal: spacing.lg,
+  scrollContent: {
     paddingBottom: spacing.huge,
     paddingTop: spacing.xl,
   },
   headerSection: {
     marginBottom: spacing.md,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.lg,
   },
   headerLabel: {
     fontSize: fonts.sizes.xs,
     fontWeight: fonts.weights.bold as any,
-    color: colors.textMuted,
+    color: colors.textAccent,
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    letterSpacing: 2,
   },
   glassPanel: {
     backgroundColor: colors.bgCard,
@@ -203,8 +197,8 @@ const styles = StyleSheet.create({
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
   },
   navItemBorder: {
     borderBottomWidth: 1,
@@ -238,23 +232,6 @@ const styles = StyleSheet.create({
   chevronContainer: {
     marginLeft: spacing.sm,
     opacity: 0.6,
-  },
-  footer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-    marginTop: spacing.md,
-    gap: 2,
-  },
-  footerText: {
-    fontSize: fonts.sizes.md,
-    fontWeight: fonts.weights.semibold as any,
-    color: colors.textPrimary,
-  },
-  footerSubtext: {
-    fontSize: fonts.sizes.xs,
-    color: colors.textMuted,
-    fontWeight: fonts.weights.medium as any,
   },
 });
 

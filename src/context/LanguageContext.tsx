@@ -71,6 +71,7 @@ const translations: Record<Language, Record<string, string>> = {
     'languages.current': 'Current',
     
     // Common
+    'common.idle': 'Idle',
     'common.settings': 'Settings & Info',
     'common.settingsInfo': 'Settings & Info',
     'common.version': 'Version',
@@ -468,6 +469,7 @@ const translations: Record<Language, Record<string, string>> = {
     'languages.current': 'الحالي',
     
     // Common
+    'common.idle': 'خامل',
     'common.settings': 'الإعدادات والمعلومات',
     'common.settingsInfo': 'الإعدادات والمعلومات',
     'common.version': 'الإصدار',
