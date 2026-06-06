@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Alert, Platform, Linking, Animated, Easing, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Alert, Platform, Linking, Animated, Easing, Dimensions, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useSupabase } from '../context/SupabaseContext';
 import { colors, borderRadius, fonts, shadows } from '../theme/colors';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -49,6 +50,7 @@ const ShareIcon = ({ size = 20, color = colors.textSecondary }: { size?: number;
 const BossExportScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { appData } = useApp();
+  const { profile } = useSupabase();
   const { t } = useLanguage();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useState(MONTHS[new Date().getMonth()]);
@@ -115,8 +117,8 @@ const BossExportScreen = () => {
   }, [appData.sessions, selectedYear, selectedMonth]);
 
   const buildPdfHtml = () => {
-    const employeeName = appData.employeeName || 'Employee';
-    const email = appData.email || '';
+    const employeeName = appData.employeeName || profile?.full_name || 'Employee';
+    const email = profile?.email || appData.email || '';
     const exportDate = new Date().toLocaleString();
 
     const filtered = getFilteredSessions(appData.sessions, selectedYear, selectedMonth);
@@ -423,8 +425,13 @@ const BossExportScreen = () => {
         </View>
 
         <View style={styles.buttonsRow}>
-          <TouchableOpacity style={[styles.exportButton, styles.pdfButton]} onPress={handleGeneratePdf} activeOpacity={0.8} disabled={generating}>
-            <Text style={styles.exportButtonText}>{generating ? t('bossExport.generating') : 'Generate PDF'}</Text>
+          <TouchableOpacity style={[styles.exportButton, styles.pdfButton, generating && styles.pdfButtonGenerating]} onPress={handleGeneratePdf} activeOpacity={0.8} disabled={generating}>
+            {generating ? (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator color="#fff" />
+              </View>
+            ) : null}
+            <Text style={styles.exportButtonText}>{!generating ? 'Generate PDF' : ''}</Text>
           </TouchableOpacity>
         </View>
 
@@ -508,6 +515,8 @@ const styles = StyleSheet.create({
   exportButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, borderRadius: 18, paddingVertical: 16, paddingHorizontal: 12, borderWidth: 1, ...shadows.card },
   pdfButton: { backgroundColor: '#dc2626', borderColor: '#b91c1c' },
   exportButtonText: { color: '#fff', fontSize: fonts.sizes.md, fontWeight: fonts.weights.bold as any, letterSpacing: 0.1 },
+  pdfButtonGenerating: { backgroundColor: '#991b1b', borderColor: '#7f1d1d' },
+  loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgMain, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   sheetOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', zIndex: 50 },
   sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.72)' },
   sheetCardAnimated: { backgroundColor: colors.bgMain, borderTopColor: colors.border, borderTopWidth: 1, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28 },
