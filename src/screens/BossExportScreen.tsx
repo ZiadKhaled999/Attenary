@@ -9,6 +9,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import * as XLSX from 'xlsx';
 import Svg, { Path } from 'react-native-svg';
+import * as Print from 'expo-print';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -217,154 +218,165 @@ const BossExportScreen = () => {
 </body></html>`;
   };
 
-  const handleGeneratePdf = async () => {
-    try {
-      setGenerating(true);
-      const html = buildPdfHtml();
-      const { printToFileAsync } = await import('expo-print');
-      const { uri } = await printToFileAsync({ html, base64: false });
-      setGeneratedFilePath(uri);
-      setSelectedExport('pdf');
-      openSheet();
-    } catch (error) {
-      console.log('PDF generation error:', error);
-      Alert.alert(t('common.error'), t('bossExport.generateFailedPdf'));
-    } finally {
-      setGenerating(false);
+  const generatePdfFile = async (): Promise<string | null> => {
+    const html = buildPdfHtml();
+    const { printToFileAsync } = await import('expo-print');
+    const { uri } = await printToFileAsync({ html, base64: false });
+    setGeneratedFilePath(uri);
+    return uri;
+  };
+
+  const generateExcelFile = async (): Promise<string | null> => {
+    const filtered = getFilteredSessions(appData.sessions, selectedYear, selectedMonth);
+    const rate = appData.hourRate || 0;
+    const employeeName = appData.employeeName || 'Employee';
+    const email = appData.email || '';
+    const jobTitle = appData.jobTitle || '';
+    const department = appData.department || '';
+    const onboarding = appData.onboardingCompleted ? 'Completed' : 'Incomplete';
+    const theme = (appData.appSettings?.theme || 'dark').charAt(0).toUpperCase() + (appData.appSettings?.theme || 'dark').slice(1);
+    const notifications = appData.appSettings?.notifications ? 'Enabled' : 'Disabled';
+    const exportDate = new Date().toLocaleString();
+    const daysWorked = new Set(filtered.map((s: any) => new Date(s.checkInTime).toDateString())).size;
+
+    const profileSheet = XLSX.utils.aoa_to_sheet([
+      ['EMPLOYEE PROFILE'],
+      ['Employee Name', employeeName],
+      ['Email', email || '—'],
+      ['Job Title', jobTitle || '—'],
+      ['Department', department || '—'],
+      ['Hour Rate ($/hr)', rate],
+      ['Onboarding', onboarding],
+      [],
+      ['EXPORT INFORMATION'],
+      ['Generated On', exportDate],
+      ['Period', `${selectedMonth} ${selectedYear}`],
+      ['App Version', '3.23.7'],
+      [],
+      ['APP SETTINGS'],
+      ['Theme', theme],
+      ['Notifications', notifications],
+    ]);
+    profileSheet['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
+      { s: { r: 8, c: 0 }, e: { r: 8, c: 1 } },
+      { s: { r: 12, c: 0 }, e: { r: 12, c: 1 } },
+    ];
+    profileSheet['!cols'] = [{ wch: 22 }, { wch: 22 }];
+
+    const summarySheet = XLSX.utils.aoa_to_sheet([
+      ['PERIOD SUMMARY'],
+      [],
+      ['Metric', 'Value'],
+      ['Total Hours', "=SUM('Session Details'!E2:E1000)"],
+      ['Total Sessions', "=COUNTA('Session Details'!H2:H1000)"],
+      ['Days Worked', daysWorked],
+      ['Hour Rate ($/hr)', rate],
+      ['Estimated Earnings', "=B4*B7"],
+      [],
+      ['Generated On', exportDate],
+    ]);
+    summarySheet['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 1 } },
+    ];
+    summarySheet['!cols'] = [{ wch: 22 }, { wch: 18 }];
+    if (summarySheet['B4']) summarySheet['B4'].z = '#,##0.00';
+    if (summarySheet['B5']) summarySheet['B5'].z = '0';
+    if (summarySheet['B6']) summarySheet['B6'].z = '0';
+    if (summarySheet['B7']) summarySheet['B7'].z = '#,##0.00';
+    if (summarySheet['B8']) summarySheet['B8'].z = '#,##0.00';
+    if (summarySheet['B10']) summarySheet['B10'].z = '@';
+
+    const sessionColumns = ['Date', 'Check In', 'Check Out', 'Duration', 'Total Hours', 'Earnings', 'Reason', 'Session ID'];
+    const sessionRows = filtered.map((s: any) => {
+      const d = new Date(s.checkInTime);
+      const ms = s.checkOutTime - s.checkInTime;
+      const hours = ms / 3600000;
+      const checkIn = new Date(s.checkInTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const checkOut = new Date(s.checkOutTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const durationH = Math.floor(ms / 3600000);
+      const durationM = Math.floor((ms % 3600000) / 60000);
+      return [
+        d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        checkIn,
+        checkOut,
+        `${durationH}h ${durationM}m`,
+        parseFloat(hours.toFixed(2)),
+        '',
+        s.reason && s.reason.trim() !== '' ? s.reason : '—',
+        s.sessionId,
+      ];
+    });
+
+    const sessionSheet = XLSX.utils.aoa_to_sheet([sessionColumns, ...sessionRows]);
+    sessionSheet['!cols'] = [
+      { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+      { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 28 },
+    ];
+    sessionSheet['!rows'] = [
+      { hpt: 20 },
+      ...sessionRows.map(() => ({ hpt: 16 })),
+    ];
+
+    for (let i = 0; i < sessionRows.length; i++) {
+      const rowNum = i + 2;
+      sessionSheet[`F${rowNum}`] = `=E${rowNum}*Summary!$B$7`;
+      sessionSheet[`F${rowNum}`].z = '#,##0.00';
     }
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+    XLSX.utils.book_append_sheet(workbook, sessionSheet, 'Session Details');
+    XLSX.utils.book_append_sheet(workbook, profileSheet, 'Profile');
+
+    const wbout = XLSX.write(workbook, { type: 'binary', bookType: 'xlsx' });
+    const fileName = `Attenary-BossExport-${selectedMonth}-${selectedYear}.xlsx`;
+    const fs = FileSystem as any;
+    const destPath = fs.documentDirectory + fileName;
+    await fs.writeAsStringAsync(destPath, buf(wbout), { encoding: fs.EncodingType.Base64 });
+    setGeneratedExcelPath(destPath);
+    return destPath;
+  };
+
+  const handleGeneratePdf = async () => {
+    setSelectedExport('pdf');
+    openSheet();
   };
 
   const handleGenerateExcel = async () => {
-    try {
-      setGeneratingExcel(true);
-
-      const filtered = getFilteredSessions(appData.sessions, selectedYear, selectedMonth);
-      const rate = appData.hourRate || 0;
-      const employeeName = appData.employeeName || 'Employee';
-      const email = appData.email || '';
-      const jobTitle = appData.jobTitle || '';
-      const department = appData.department || '';
-      const onboarding = appData.onboardingCompleted ? 'Completed' : 'Incomplete';
-      const theme = (appData.appSettings?.theme || 'dark').charAt(0).toUpperCase() + (appData.appSettings?.theme || 'dark').slice(1);
-      const notifications = appData.appSettings?.notifications ? 'Enabled' : 'Disabled';
-      const exportDate = new Date().toLocaleString();
-      const daysWorked = new Set(filtered.map((s: any) => new Date(s.checkInTime).toDateString())).size;
-
-      const profileSheet = XLSX.utils.aoa_to_sheet([
-        ['EMPLOYEE PROFILE'],
-        ['Employee Name', employeeName],
-        ['Email', email || '—'],
-        ['Job Title', jobTitle || '—'],
-        ['Department', department || '—'],
-        ['Hour Rate ($/hr)', rate],
-        ['Onboarding', onboarding],
-        [],
-        ['EXPORT INFORMATION'],
-        ['Generated On', exportDate],
-        ['Period', `${selectedMonth} ${selectedYear}`],
-        ['App Version', '3.23.7'],
-        [],
-        ['APP SETTINGS'],
-        ['Theme', theme],
-        ['Notifications', notifications],
-      ]);
-      profileSheet['!merges'] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
-        { s: { r: 8, c: 0 }, e: { r: 8, c: 1 } },
-        { s: { r: 12, c: 0 }, e: { r: 12, c: 1 } },
-      ];
-      profileSheet['!cols'] = [{ wch: 22 }, { wch: 22 }];
-
-      const summarySheet = XLSX.utils.aoa_to_sheet([
-        ['PERIOD SUMMARY'],
-        [],
-        ['Metric', 'Value'],
-        ['Total Hours', "=SUM('Session Details'!E2:E1000)"],
-        ['Total Sessions', "=COUNTA('Session Details'!H2:H1000)"],
-        ['Days Worked', daysWorked],
-        ['Hour Rate ($/hr)', rate],
-        ['Estimated Earnings', "=B4*B7"],
-        [],
-        ['Generated On', exportDate],
-      ]);
-      summarySheet['!merges'] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
-        { s: { r: 2, c: 0 }, e: { r: 2, c: 1 } },
-      ];
-      summarySheet['!cols'] = [{ wch: 22 }, { wch: 18 }];
-      if (summarySheet['B4']) summarySheet['B4'].z = '#,##0.00';
-      if (summarySheet['B5']) summarySheet['B5'].z = '0';
-      if (summarySheet['B6']) summarySheet['B6'].z = '0';
-      if (summarySheet['B7']) summarySheet['B7'].z = '#,##0.00';
-      if (summarySheet['B8']) summarySheet['B8'].z = '#,##0.00';
-      if (summarySheet['B10']) summarySheet['B10'].z = '@';
-
-      const sessionColumns = ['Date', 'Check In', 'Check Out', 'Duration', 'Total Hours', 'Earnings', 'Reason', 'Session ID'];
-      const sessionRows = filtered.map((s: any) => {
-        const d = new Date(s.checkInTime);
-        const ms = s.checkOutTime - s.checkInTime;
-        const hours = ms / 3600000;
-        const checkIn = new Date(s.checkInTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-        const checkOut = new Date(s.checkOutTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-        const durationH = Math.floor(ms / 3600000);
-        const durationM = Math.floor((ms % 3600000) / 60000);
-        return [
-          d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-          checkIn,
-          checkOut,
-          `${durationH}h ${durationM}m`,
-          parseFloat(hours.toFixed(2)),
-          '',
-          s.reason && s.reason.trim() !== '' ? s.reason : '—',
-          s.sessionId,
-        ];
-      });
-
-      const sessionSheet = XLSX.utils.aoa_to_sheet([sessionColumns, ...sessionRows]);
-      sessionSheet['!cols'] = [
-        { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-        { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 28 },
-      ];
-      sessionSheet['!rows'] = [
-        { hpt: 20 },
-        ...sessionRows.map(() => ({ hpt: 16 })),
-      ];
-
-      for (let i = 0; i < sessionRows.length; i++) {
-        const rowNum = i + 2;
-        sessionSheet[`F${rowNum}`] = `=E${rowNum}*Summary!$B$7`;
-        sessionSheet[`F${rowNum}`].z = '#,##0.00';
-      }
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
-      XLSX.utils.book_append_sheet(workbook, sessionSheet, 'Session Details');
-      XLSX.utils.book_append_sheet(workbook, profileSheet, 'Profile');
-
-      const wbout = XLSX.write(workbook, { type: 'binary', bookType: 'xlsx' });
-      const fileName = `Attenary-BossExport-${selectedMonth}-${selectedYear}.xlsx`;
-      const fs = FileSystem as any;
-      const destPath = fs.documentDirectory + fileName;
-      await fs.writeAsStringAsync(destPath, buf(wbout), { encoding: fs.EncodingType.Base64 });
-      setGeneratedExcelPath(destPath);
-      setSelectedExport('excel');
-      openSheet();
-    } catch (error) {
-      console.log('Excel generation error:', error);
-      Alert.alert(t('common.error'), t('bossExport.generateFailedExcel'));
-    } finally {
-      setGeneratingExcel(false);
-    }
+    setSelectedExport('excel');
+    openSheet();
   };
 
-  const handleShareOption = async (option: 'save' | 'whatsapp' | 'telegram' | 'gmail' | 'native') => {
-    const filePath = selectedExport === 'pdf' ? generatedFilePath : generatedExcelPath;
-    const fileName = `Attenary-BossExport-${selectedMonth}-${selectedYear}.${selectedExport === 'pdf' ? 'pdf' : 'xlsx'}`;
-    const saveKey = selectedExport === 'pdf' ? 'bossExport.savedPdf' : 'bossExport.savedExcel';
-    if (!filePath) { closeSheet(); return; }
-    closeSheet();
-
+  const handleGenerateWithOption = async (option: 'save' | 'whatsapp' | 'telegram' | 'gmail' | 'native') => {
     try {
+      if (selectedExport === 'pdf' && !generatedFilePath) {
+        setGenerating(true);
+        const uri = await generatePdfFile();
+        if (uri) setGeneratedFilePath(uri);
+        setGenerating(false);
+      } else if (selectedExport === 'excel' && !generatedExcelPath) {
+        setGeneratingExcel(true);
+        const path = await generateExcelFile();
+        if (path) setGeneratedExcelPath(path);
+        setGeneratingExcel(false);
+      }
+
+      const filePath = selectedExport === 'pdf' ? generatedFilePath : generatedExcelPath;
+      const fileName = `Attenary-BossExport-${selectedMonth}-${selectedYear}.${selectedExport === 'pdf' ? 'pdf' : 'xlsx'}`;
+      if (!filePath) {
+        Alert.alert(t('common.error'), selectedExport === 'pdf' ? t('bossExport.generateFailedPdf') : t('bossExport.generateFailedExcel'));
+        return;
+      }
+
+      if (option === 'save') {
+        Alert.alert(t('common.success'), selectedExport === 'pdf' ? t('bossExport.savedPdf') : t('bossExport.savedExcel'));
+        closeSheet();
+        return;
+      }
+
+      closeSheet();
       const fs = FileSystem as any;
       const destPath = fs.documentDirectory + fileName;
       await fs.copyAsync({ from: filePath, to: destPath });
@@ -376,11 +388,6 @@ const BossExportScreen = () => {
         link.download = fileName;
         link.click();
         URL.revokeObjectURL(url);
-        return;
-      }
-
-      if (option === 'save') {
-        Alert.alert(t('common.success'), t(saveKey));
         return;
       }
 
@@ -425,8 +432,10 @@ const BossExportScreen = () => {
         await Sharing.shareAsync(shareUrl, { mimeType, dialogTitle: 'Share Boss Export' });
       }
     } catch (error) {
-      console.log('Share error:', error);
-      Alert.alert(t('common.error'), t('bossExport.shareFailed'));
+      console.log('Option error:', error);
+      Alert.alert(t('common.error'), selectedExport === 'pdf' ? t('bossExport.generateFailedPdf') : t('bossExport.generateFailedExcel'));
+      setGenerating(false);
+      setGeneratingExcel(false);
     }
   };
 
@@ -517,35 +526,35 @@ const BossExportScreen = () => {
               </Text>
 
               <View style={styles.shareOptions}>
-                <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('save')}>
+                <TouchableOpacity style={styles.shareOption} onPress={() => handleGenerateWithOption('save')}>
                   <View style={[styles.shareIconBox, { backgroundColor: '#e2e8f0' }]}>
                     <FileIcon size={20} color="#0f172a" />
                   </View>
                   <Text style={styles.shareLabel}>{t('bossExport.saveLocal')}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('whatsapp')}>
+                <TouchableOpacity style={styles.shareOption} onPress={() => handleGenerateWithOption('whatsapp')}>
                   <View style={[styles.shareIconBox, { backgroundColor: '#dcfce7' }]}>
                     <ShareIcon size={20} color="#166534" />
                   </View>
                   <Text style={styles.shareLabel}>{t('bossExport.whatsapp')}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('telegram')}>
+                <TouchableOpacity style={styles.shareOption} onPress={() => handleGenerateWithOption('telegram')}>
                   <View style={[styles.shareIconBox, { backgroundColor: '#e0e7ff' }]}>
                     <ShareIcon size={20} color="#3730a3" />
                   </View>
                   <Text style={styles.shareLabel}>{t('bossExport.telegram')}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('gmail')}>
+                <TouchableOpacity style={styles.shareOption} onPress={() => handleGenerateWithOption('gmail')}>
                   <View style={[styles.shareIconBox, { backgroundColor: '#fee2e2' }]}>
                     <ShareIcon size={20} color="#991b1b" />
                   </View>
                   <Text style={styles.shareLabel}>{t('bossExport.gmail')}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('native')}>
+                <TouchableOpacity style={styles.shareOption} onPress={() => handleGenerateWithOption('native')}>
                   <View style={[styles.shareIconBox, { backgroundColor: '#f1f5f9' }]}>
                     <ShareIcon size={20} color="#0f172a" />
                   </View>
