@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,308 +6,374 @@ import {
   StyleSheet,
   TouchableOpacity,
   StatusBar,
-  Image,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
-import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
-import { formatHoursMinutes, getDateString, getMonthString, formatTimeReversed } from '../utils/timeUtils';
-import CircularProgressChart from '../components/CircularProgressChart';
-import ComponentErrorBoundary from '../components/ComponentErrorBoundary';
-import Svg, { Path, Circle } from 'react-native-svg';
-import { useLanguage } from '../context/LanguageContext';
+import { colors, fonts } from '../theme/colors';
+import Svg, { Rect, Line, Text as SvgText, Polyline, Defs, LinearGradient, Stop } from 'react-native-svg';
 
-const { width, height } = Dimensions.get('window');
+const MS_PER_HOUR = 3600000;
+const MONTH_NAMES = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
 
-// Responsive scaling functions
-const scale = (size: number) => (width / 375) * size;
-const verticalScale = (size: number) => (height / 667) * size;
+interface DayChartData {
+  day: number;
+  hours: number;
+  label: string;
+}
 
-// ═══════════════════════════════════════════════════════════════════
-// FUTURISTIC 2026 GLASSMORPHISM ICONS
-// ═══════════════════════════════════════════════════════════════════
+const CustomBarChart = ({
+  data,
+  selectedMonth,
+}: {
+  data: DayChartData[];
+  selectedMonth: string;
+}) => {
+  const [tooltip, setTooltip] = useState<{ idx: number; x: number; y: number } | null>(null);
+  const chartWidth = Dimensions.get('window').width - 48;
+  const chartHeight = 176;
+  const maxHours = 10;
+  const innerWidth = chartWidth;
+  const barSlotWidth = data.length > 0 ? innerWidth / data.length : innerWidth;
+  const barWidth = barSlotWidth * 0.65;
+  const barGap = (barSlotWidth - barWidth) / 2;
 
-const CalendarIcon = ({ size = 24 }: { size?: number }) => (
-  <Image 
-    source={require('../../assets/icons/report.png')} 
-    style={{ width: size, height: size }} 
-    resizeMode="contain"
-  />
-);
+  const onBarPress = (idx: number) => {
+    if (data[idx].hours <= 0) return;
+    const barH = Math.max((data[idx].hours / maxHours) * chartHeight, 2);
+    const y = chartHeight - barH;
+    const x = idx * barSlotWidth + barSlotWidth / 2;
+    setTooltip({ idx, x, y });
+  };
 
-const ClockIcon = ({ size = 20, color = colors.textSecondary }: { size?: number; color?: string }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth="2" />
-    <Path d="M12 7v5l3 3" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
-
-const SessionIcon = ({ size = 20, color = colors.textSecondary }: { size?: number; color?: string }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth="2" />
-    <Circle cx="12" cy="12" r="3" fill={color} />
-  </Svg>
-);
+  return (
+    <View style={{ height: chartHeight + 20 }}>
+      <Svg width={chartWidth} height={chartHeight}>
+        <Defs>
+          <LinearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="rgba(168, 130, 255, 0.85)" />
+            <Stop offset="100%" stopColor="rgba(168, 130, 255, 0.01)" />
+          </LinearGradient>
+        </Defs>
+        {[0, 4, 8].map((val) => {
+          const y = chartHeight - (val / maxHours) * chartHeight;
+          return (
+            <React.Fragment key={val}>
+              <Line
+                x1={0}
+                y1={y}
+                x2={chartWidth}
+                y2={y}
+                stroke="#2a2a2a"
+                strokeWidth={1}
+                strokeDasharray="4 4"
+              />
+              <SvgText
+                x={8}
+                y={y + 3}
+                fontSize={9}
+                fontFamily="monospace"
+                fill="#666666"
+                textAnchor="start"
+              >
+                {val}h
+              </SvgText>
+            </React.Fragment>
+          );
+        })}
+        {data.map((d, i) => {
+          const barH = Math.max((d.hours / maxHours) * chartHeight, 2);
+          const x = i * barSlotWidth + barGap;
+          const yPos = chartHeight - barH;
+          return (
+            <Rect
+              key={i}
+              x={x}
+              y={yPos}
+              width={barWidth}
+              height={barH}
+              rx={3}
+              ry={3}
+              fill={d.hours > 0 ? 'url(#barGrad)' : 'rgba(54, 54, 54, 0.4)'}
+              stroke={d.hours > 0 ? 'rgba(168, 130, 255, 1)' : 'rgba(54, 54, 54, 0.6)'}
+              strokeWidth={1.5}
+              onPress={() => onBarPress(i)}
+            />
+          );
+        })}
+        {data.map((d, i) => {
+          if (!d.label) return null;
+          const x = i * barSlotWidth + barSlotWidth / 2;
+          return (
+            <SvgText
+              key={i}
+              x={x}
+              y={chartHeight + 12}
+              fill="#666666"
+              fontSize={9}
+              fontFamily="monospace"
+              textAnchor="middle"
+            >
+              {d.label}
+            </SvgText>
+          );
+        })}
+      </Svg>
+      {tooltip && (
+        <Pressable
+          style={[
+            styles.tooltip,
+            {
+              left: Math.min(tooltip.x - 36, chartWidth - 80),
+              top: tooltip.y - 32,
+            },
+          ]}
+          onPress={() => setTooltip(null)}
+        >
+          <Text style={styles.tooltipText}>
+            {selectedMonth} {data[tooltip.idx].day}: {data[tooltip.idx].hours.toFixed(1)}h
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+};
 
 const MonthlyReportScreen = () => {
   const { appData } = useApp();
-  const { t, isRTL, language } = useLanguage();
-  const [selectedMonth, setSelectedMonth] = useState(getMonthString(new Date()));
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState<number>(new Date().getMonth());
+  const [showYearDropdown, setShowYearDropdown] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  const monthlyData = useMemo(() => {
-    // Limit to recent 1000 sessions for performance before filtering by month
-    const recentSessions = appData.sessions
-      .sort((a: any, b: any) => b.checkInTime - a.checkInTime)
-      .slice(0, 1000);
-
-    const sessions = recentSessions.filter((s: any) => {
-      const sessionMonth = getMonthString(new Date(s.checkInTime));
-      return sessionMonth === selectedMonth;
-    });
-
-    const days = new Map();
-    let totalHours = 0;
-    let totalSessions = sessions.length;
-
-    sessions.forEach((session: any) => {
-      const day = getDateString(session.checkInTime);
-      const duration = session.checkOutTime
-        ? Math.floor((session.checkOutTime - session.checkInTime) / 1000)
-        : 0;
-      
-      totalHours += duration;
-      
-      if (!days.has(day)) {
-        days.set(day, {
-          date: day,
-          sessions: [],
-          totalDuration: 0
-        });
-      }
-      
-      const dayData = days.get(day);
-      dayData.sessions.push({
-        ...session,
-        duration
-      });
-      dayData.totalDuration += duration;
-    });
-
-    return {
-      days: Array.from(days.values()).sort((a, b) => a.date.localeCompare(b.date)),
-      totalHours,
-      totalSessions
-    };
-  }, [appData.sessions, selectedMonth]);
-
-  // Calculate circular progress chart data
-  const chartData = useMemo(() => {
-    const totalHoursInSeconds = monthlyData.totalHours;
-    const workingDaysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-    const standardWorkingHours = workingDaysInMonth * 8 * 3600; // 8 hours per working day
-    
-    const actualHours = totalHoursInSeconds / 3600; // Convert to hours
-    const targetPercentage = (actualHours / (standardWorkingHours / 3600)) * 100;
-    const completedPercentage = Math.min(targetPercentage, 100);
-    const remainingPercentage = Math.max(0, 100 - completedPercentage);
-    const overtimePercentage = Math.max(0, targetPercentage - 100);
-
-    return [
-      {
-        label: t('monthlyreport.completed'),
-        value: Math.round(completedPercentage),
-        color: colors.primary
-      },
-      {
-        label: t('monthlyreport.remaining'),
-        value: Math.round(remainingPercentage),
-        color: colors.info
-      },
-      {
-        label: t('monthlyreport.overtime'),
-        value: Math.round(overtimePercentage),
-        color: colors.warning
-      }
-    ];
-  }, [monthlyData.totalHours]);
-
-  const months = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const monthsList = [];
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(currentYear, i, 1);
-      monthsList.push(getMonthString(date));
+  const distinctYears = useMemo(() => {
+    if (!appData.sessions || appData.sessions.length === 0) {
+      return [currentYear];
     }
-    return monthsList;
-  }, []);
+    const years = new Set<number>();
+    appData.sessions.forEach((s: any) => {
+      const d = new Date(s.checkInTime);
+      if (!isNaN(d.getTime())) {
+        years.add(d.getFullYear());
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [appData.sessions, currentYear]);
+
+  const sessionsInPeriod = useMemo(() => {
+    return appData.sessions.filter((s: any) => {
+      const d = new Date(s.checkInTime);
+      if (isNaN(d.getTime())) return false;
+      return d.getFullYear() === selectedYear && d.getMonth() === selectedMonthIndex;
+    });
+  }, [appData.sessions, selectedYear, selectedMonthIndex]);
+
+  const dailyHoursMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    sessionsInPeriod.forEach((s: any) => {
+      const d = new Date(s.checkInTime);
+      if (isNaN(d.getTime())) return;
+      const day = d.getDate();
+      const dur = s.checkOutTime ? s.checkOutTime - s.checkInTime : 0;
+      map[day] = (map[day] || 0) + dur;
+    });
+    return map;
+  }, [sessionsInPeriod]);
+
+  const metrics = useMemo(() => {
+    const daysArr = Object.values(dailyHoursMap);
+    const totalMs = daysArr.reduce((sum, s) => sum + s, 0);
+    const totalSessions = sessionsInPeriod.length;
+    const activeDays = daysArr.filter((h) => h > 0).length;
+    const peakMs = daysArr.length > 0 ? Math.max(...daysArr) : 0;
+    const peakHours = peakMs / MS_PER_HOUR;
+    return {
+      totalHours: totalMs / MS_PER_HOUR,
+      totalSessions,
+      activeDays,
+      peakOutput: Math.max(peakHours, 0),
+    };
+  }, [dailyHoursMap, sessionsInPeriod]);
+
+  const chartData = useMemo(() => {
+    const daysInMonth = new Date(selectedYear, selectedMonthIndex + 1, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, i) => {
+      const day = i + 1;
+      return {
+        day,
+        hours: (dailyHoursMap[day] || 0) / MS_PER_HOUR,
+        label:
+          day === 1 || day % 5 === 0 || day === daysInMonth ? String(day) : '',
+      };
+    });
+  }, [dailyHoursMap, selectedYear, selectedMonthIndex]);
+
+  const monthHasData = useCallback(
+    (mIndex: number, year: number) => {
+      return appData.sessions.some((s: any) => {
+        const d = new Date(s.checkInTime);
+        if (isNaN(d.getTime())) return false;
+        return d.getFullYear() === year && d.getMonth() === mIndex;
+      });
+    },
+    [appData.sessions]
+  );
+
+  const handleMonthPress = useCallback(
+    (mIndex: number) => {
+      const currentYearHas = monthHasData(mIndex, selectedYear);
+      if (currentYearHas) {
+        setSelectedMonthIndex(mIndex);
+      } else {
+        const firstYearWithMonth = distinctYears.find((y) => monthHasData(mIndex, y));
+        if (firstYearWithMonth) {
+          setSelectedYear(firstYearWithMonth);
+          setSelectedMonthIndex(mIndex);
+        } else {
+          setSelectedMonthIndex(mIndex);
+        }
+      }
+      setTimeout(() => {
+        const offset = mIndex * 80 - 120;
+        scrollViewRef.current?.scrollTo({ x: Math.max(0, offset), animated: true });
+      }, 50);
+    },
+    [selectedYear, distinctYears, monthHasData]
+  );
+
+  const selectedMonthLabel = MONTH_NAMES[selectedMonthIndex];
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* ═══════════════════════════════════════════════════════════
-            HEADER SECTION
-            ═══════════════════════════════════════════════════════════ */}
-        <View style={styles.headerSection}>
-          <View style={[
-            styles.headerIconContainer,
-            isRTL && styles.headerIconContainerRTL
-          ]}>
-            <CalendarIcon size={48} />
-          </View>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>{t('monthlyreport.title')}</Text>
-            <Text style={styles.subtitle}>{t('monthlyreport.subtitle')}</Text>
+        <View style={styles.topBar}>
+          <Text style={styles.title}>Monthly Report</Text>
+          <View style={styles.yearSelectorContainer}>
+            <TouchableOpacity
+              style={styles.yearButton}
+              onPress={() => setShowYearDropdown(!showYearDropdown)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.yearButtonText}>{selectedYear}</Text>
+              <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#999999" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Polyline points="6 9 12 15 18 9" />
+              </Svg>
+            </TouchableOpacity>
+            {showYearDropdown && (
+              <TouchableOpacity
+                style={styles.yearDropdownOverlay}
+                activeOpacity={1}
+                onPress={() => setShowYearDropdown(false)}
+              >
+                <View style={styles.yearDropdown}>
+                  {distinctYears.map((year) => (
+                    <TouchableOpacity
+                      key={year}
+                      style={styles.yearOption}
+                      onPress={() => {
+                        setSelectedYear(year);
+                        setShowYearDropdown(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.yearOptionText,
+                          year === selectedYear && styles.yearOptionTextActive,
+                        ]}
+                      >
+                        {year}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
-        {/* ═══════════════════════════════════════════════════════════
-            MONTH SELECTOR - Glass Pills
-            ═══════════════════════════════════════════════════════════ */}
-        <View style={styles.monthSelector}>
-          <Text style={styles.monthLabel}>{t('monthlyreport.selectMonth')}</Text>
+        <View style={styles.monthCarousel}>
           <ScrollView
+            ref={scrollViewRef}
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={styles.monthScroll}
             contentContainerStyle={styles.monthScrollContent}
           >
-            {months.map((month) => (
-              <TouchableOpacity
-                key={month}
-                style={[
-                  styles.monthButton,
-                  selectedMonth === month && styles.monthButtonActive
-                ]}
-                onPress={() => setSelectedMonth(month)}
-                activeOpacity={0.8}
-              >
-                <Text style={[
-                  styles.monthButtonText,
-                  selectedMonth === month && styles.monthButtonTextActive
-                ]}>
-                  {month}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {MONTH_NAMES.map((name, index) => {
+              const hasData = monthHasData(index, selectedYear);
+              const isSelected = selectedMonthIndex === index;
+              return (
+                <TouchableOpacity
+                  key={name}
+                  style={[
+                    styles.monthPill,
+                    isSelected ? styles.monthPillSelected : hasData ? styles.monthPillActive : styles.monthPillEmpty,
+                  ]}
+                  onPress={() => handleMonthPress(index)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.monthPillText,
+                      isSelected && styles.monthPillTextSelected,
+                    ]}
+                  >
+                    {name}
+                  </Text>
+                  {!isSelected && hasData && <View style={styles.purpleDot} />}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
 
-        {/* ═══════════════════════════════════════════════════════════
-            SUMMARY CARDS - Glass Cards
-            ═══════════════════════════════════════════════════════════ */}
-        <View style={styles.summaryContainer}>
-          <View style={[styles.summaryCard, styles.summaryCardPrimary]}>
-            <View style={styles.summaryIconContainer}>
-              <ClockIcon size={18} color={colors.primary} />
+        <View style={styles.metricsGrid}>
+          <View style={styles.metricCard}>
+            <View style={styles.metricDotRow}>
+              <View style={styles.metricDot} />
             </View>
-            <Text style={styles.summaryLabel}>{t('monthlyreport.totalHours')}</Text>
-            <Text style={[styles.summaryValue, styles.summaryValuePrimary]}>
-              {formatHoursMinutes(monthlyData.totalHours)}
-            </Text>
+            <Text style={styles.metricLabel}>Tracked</Text>
+            <Text style={styles.metricValue}>{Math.floor(metrics.totalHours)}h</Text>
           </View>
-          
-          <View style={styles.summaryCard}>
-            <View style={[styles.summaryIconContainer, styles.summaryIconContainerInfo]}>
-              <SessionIcon size={18} color={colors.info} />
-            </View>
-            <Text style={styles.summaryLabel}>{t('monthlyreport.sessions')}</Text>
-            <Text style={[styles.summaryValue, styles.summaryValueInfo]}>
-              {monthlyData.totalSessions}
-            </Text>
+          <View style={styles.metricCard}>
+            <View style={styles.metricDotRow} />
+            <Text style={styles.metricLabel}>Sessions</Text>
+            <Text style={styles.metricValue}>{metrics.totalSessions}</Text>
           </View>
-          
-          <View style={styles.summaryCard}>
-            <View style={[styles.summaryIconContainer, styles.summaryIconContainerWarning]}>
-              <CalendarIcon size={18} />
-            </View>
-            <Text style={styles.summaryLabel}>{t('monthlyreport.activeDays')}</Text>
-            <Text style={[styles.summaryValue, styles.summaryValueWarning]}>
-              {monthlyData.days.length}
-            </Text>
+          <View style={styles.metricCard}>
+            <View style={styles.metricDotRow} />
+            <Text style={styles.metricLabel}>Active Days</Text>
+            <Text style={styles.metricValue}>{metrics.activeDays} d</Text>
           </View>
         </View>
 
-        {/* ═══════════════════════════════════════════════════════════
-             CIRCULAR PROGRESS CHART
-             ═══════════════════════════════════════════════════════════ */}
-         <View style={styles.chartSection}>
-           <ComponentErrorBoundary>
-             <CircularProgressChart
-               data={chartData}
-               title={t('monthlyreport.progress').replace('{month}', selectedMonth)}
-             />
-           </ComponentErrorBoundary>
-         </View>
+        <View style={styles.dailyCard}>
+          <View style={styles.chartHeader}>
+            <View style={styles.chartDot} />
+            <Text style={styles.chartTitle}>Daily Breakdown</Text>
+          </View>
+          <View style={styles.chartContainer}>
+            <CustomBarChart
+              data={chartData}
+              selectedMonth={selectedMonthLabel}
+            />
+          </View>
+        </View>
 
-        {/* ═══════════════════════════════════════════════════════════
-            DAILY BREAKDOWN - Glass Cards
-            ═══════════════════════════════════════════════════════════ */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('monthlyreport.dailyBreakdown')}</Text>
-          
-          {monthlyData.days.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconContainer}>
-                <CalendarIcon size={40} />
-              </View>
-              <Text style={styles.emptyStateTitle}>{t('monthlyreport.noSessionsFound').replace('{month}', selectedMonth)}</Text>
-              <Text style={styles.emptyStateSubtext}>
-                {t('monthlyreport.startCheckingIn')}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.daysList}>
-              {monthlyData.days.map((day) => (
-                <View key={day.date} style={styles.dayCard}>
-                  {/* Day Header */}
-                  <View style={styles.dayHeader}>
-                    <View style={styles.dayHeaderLeft}>
-                      <View style={styles.dayStatusDot} />
-                      <Text style={styles.dayDate}>
-                        {new Date(day.date).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </Text>
-                    </View>
-                    <View style={styles.dayBadge}>
-                      <Text style={styles.dayBadgeText}>{t('monthlyreport.sessionsCount').replace('{count}', String(day.sessions.length))}</Text>
-                    </View>
-                  </View>
-                  
-                  {/* Day Total */}
-                  <View style={styles.dayTotalContainer}>
-                    <Text style={styles.dayTotalLabel}>{t('monthlyreport.totalDuration')}</Text>
-                    <Text style={styles.dayTotalValue}>{formatHoursMinutes(day.totalDuration)}</Text>
-                  </View>
-                  
-                  {/* Sessions List */}
-                  <View style={styles.sessionList}>
-                    {day.sessions.map((session: any) => (
-                      <View key={session.sessionId} style={styles.sessionItem}>
-                        <View style={styles.sessionLeft}>
-                          <ClockIcon size={14} color={colors.textMuted} />
-                          <Text style={styles.sessionTime}>
-                            {formatTimeReversed(new Date(session.checkInTime))}
-                          </Text>
-                        </View>
-                        <Text style={styles.sessionDuration}>
-                          {formatHoursMinutes(session.duration)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
+        <View style={styles.peakCard}>
+          <View>
+            <Text style={styles.peakLabel}>Peak Output</Text>
+            <Text style={styles.peakSublabel}>Highest single-day focus duration</Text>
+          </View>
+          <Text style={styles.peakValue}>{metrics.peakOutput.toFixed(1)} hrs</Text>
         </View>
       </ScrollView>
     </View>
@@ -323,302 +389,250 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: scale(spacing.xl),
-    paddingTop: verticalScale(spacing.huge),
-    paddingBottom: verticalScale(120), // Extra padding to ensure content is visible above tab bar
+    padding: 24,
+    paddingTop: 48,
+    paddingBottom: 120,
   },
-
-  // ═══════════════════════════════════════════════════════════════
-  // HEADER SECTION
-  // ═══════════════════════════════════════════════════════════════
-  headerSection: {
+  topBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  headerIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.borderAccent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.lg,
-    ...shadows.neonGlowSubtle,
-  },
-  headerIconContainerRTL: {
-    marginRight: 0,
-    marginLeft: spacing.lg,
-  },
-  headerTextContainer: {
-    flex: 1,
+    marginBottom: 20,
   },
   title: {
-    fontSize: fonts.sizes.hero,
-    fontWeight: '700' as const,
-    color: colors.textPrimary,
-    letterSpacing: -1,
+    fontSize: fonts.sizes.lg,
+    fontWeight: '700',
+    color: colors.white,
+    letterSpacing: -0.5,
   },
-  subtitle: {
-    fontSize: fonts.sizes.md,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
+  yearSelectorContainer: {
+    position: 'relative',
   },
-
-  // ═══════════════════════════════════════════════════════════════
-  // MONTH SELECTOR
-  // ═══════════════════════════════════════════════════════════════
-  monthSelector: {
-    marginBottom: spacing.xl,
+  yearButton: {
+    backgroundColor: colors.base05,
+    borderWidth: 1,
+    borderColor: colors.base30,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  monthLabel: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-    fontWeight: '500' as const,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  yearButtonText: {
+    color: colors.base100,
+    fontSize: 12,
+    fontWeight: '600',
   },
-  monthScroll: {
-    maxHeight: 60,
+  yearDropdownOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
+  },
+  yearDropdown: {
+    position: 'absolute',
+    right: 0,
+    top: 40,
+    width: 96,
+    borderRadius: 8,
+    backgroundColor: colors.base05,
+    borderWidth: 1,
+    borderColor: colors.base30,
+    paddingVertical: 4,
+    zIndex: 150,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  yearOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.base25,
+  },
+  yearOptionText: {
+    fontSize: 12,
+    color: colors.base60,
+    fontWeight: '600',
+  },
+  yearOptionTextActive: {
+    color: colors.fnPurple,
+  },
+  monthCarousel: {
+    marginBottom: 20,
   },
   monthScrollContent: {
-    gap: spacing.sm,
+    gap: 8,
   },
-  monthButton: {
-    backgroundColor: colors.bgCard,
+  monthPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.button,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    marginRight: spacing.sm,
-  },
-  monthButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-    ...shadows.neonGlowSubtle,
-  },
-  monthButtonText: {
-    color: colors.textSecondary,
-    fontSize: fonts.sizes.sm,
-    fontWeight: '500' as const,
-  },
-  monthButtonTextActive: {
-    color: colors.bgMain,
-    fontWeight: '700' as const,
-  },
-
-  // ═══════════════════════════════════════════════════════════════
-  // SUMMARY CARDS
-  // ═══════════════════════════════════════════════════════════════
-  summaryContainer: {
     flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
+    alignItems: 'center',
+    gap: 4,
   },
-  summaryCard: {
+  monthPillSelected: {
+    backgroundColor: colors.fnPurple,
+    color: colors.base00,
+    borderColor: colors.fnPurple,
+    shadowColor: colors.fnPurple,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  monthPillActive: {
+    backgroundColor: 'rgba(36,36,36,0.6)',
+    borderColor: colors.base25,
+  },
+  monthPillEmpty: {
+    backgroundColor: 'rgba(38,38,38,0.2)',
+    borderColor: colors.base20,
+  },
+  monthPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.base60,
+  },
+  monthPillTextSelected: {
+    color: colors.base00,
+    fontWeight: '700',
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  metricCard: {
     flex: 1,
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.base10,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    alignItems: 'center',
-    ...shadows.glass,
+    borderColor: colors.base25,
+    borderRadius: 20,
+    padding: 14,
+    flexDirection: 'column',
+    minHeight: 72,
   },
-  summaryCardPrimary: {
-    borderColor: colors.borderAccent,
+  metricDotRow: {
+    height: 6,
+    marginBottom: 4,
   },
-  summaryIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0, 255, 136, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
+  metricDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.fnPurple,
   },
-  summaryIconContainerInfo: {
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  summaryIconContainerWarning: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
-  },
-  summaryLabel: {
-    fontSize: fonts.sizes.xs,
-    color: colors.textMuted,
+  metricLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: colors.base50,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
+    letterSpacing: 0.8,
+    marginTop: 4,
   },
-  summaryValue: {
-    fontSize: fonts.sizes.xl,
-    fontWeight: '700' as const,
-    color: colors.textPrimary,
+  metricValue: {
+    fontSize: 15,
+    fontWeight: '700',
     fontFamily: 'monospace',
+    color: colors.white,
+    marginTop: 4,
   },
-  summaryValuePrimary: {
-    color: colors.primary,
-  },
-  summaryValueInfo: {
-    color: colors.info,
-  },
-  summaryValueWarning: {
-    color: colors.warning,
-  },
-
-  // ═══════════════════════════════════════════════════════════════
-  // CHART SECTION
-  // ═══════════════════════════════════════════════════════════════
-  chartSection: {
-    marginBottom: spacing.xxl,
-  },
-
-  // ═══════════════════════════════════════════════════════════════
-  // SECTION
-  // ═══════════════════════════════════════════════════════════════
-  section: {
-    marginBottom: spacing.xl,
-  },
-  sectionTitle: {
-    fontSize: fonts.sizes.xl,
-    fontWeight: '600' as const,
-    color: colors.textPrimary,
-    marginBottom: spacing.lg,
-  },
-
-  // Empty State
-  emptyState: {
-    alignItems: 'center',
-    padding: spacing.xxl,
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.card,
+  dailyCard: {
+    backgroundColor: colors.base10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.base25,
+    borderRadius: 20,
+    padding: 16,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: colors.bgElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  emptyStateTitle: {
-    fontSize: fonts.sizes.lg,
-    fontWeight: '600' as const,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  emptyStateSubtext: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-
-  // Days List
-  daysList: {
-    gap: spacing.md,
-  },
-  dayCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.card,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadows.card,
-  },
-  dayHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  dayHeaderLeft: {
+  chartHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  dayStatusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.primary,
-    marginRight: spacing.md,
-    ...shadows.neonGlowSubtle,
+  chartDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.fnPurple,
   },
-  dayDate: {
-    fontSize: fonts.sizes.lg,
-    fontWeight: '600' as const,
-    color: colors.textPrimary,
-  },
-  dayBadge: {
-    backgroundColor: colors.bgElevated,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  dayBadgeText: {
-    fontSize: fonts.sizes.xs,
-    color: colors.textSecondary,
-    fontWeight: '500' as const,
-  },
-
-  // Day Total
-  dayTotalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.bgElevated,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  dayTotalLabel: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textMuted,
+  chartTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.base60,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
-  dayTotalValue: {
-    fontSize: fonts.sizes.lg,
-    fontWeight: '700' as const,
-    color: colors.primary,
-    fontFamily: 'monospace',
+  chartContainer: {
+    position: 'relative',
+    height: 176,
   },
-
-  // Session List
-  sessionList: {
-    gap: spacing.sm,
-  },
-  sessionItem: {
+  peakCard: {
+    backgroundColor: colors.base10,
+    borderWidth: 1,
+    borderColor: colors.base25,
+    borderRadius: 20,
+    padding: 16,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.bgElevated,
-    borderRadius: borderRadius.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  sessionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+  peakLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.base60,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  sessionTime: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textSecondary,
-    fontWeight: '500' as const,
+  peakSublabel: {
+    fontSize: 11,
+    color: colors.base50,
+    marginTop: 2,
   },
-  sessionDuration: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textPrimary,
-    fontWeight: '600' as const,
+  peakValue: {
+    fontSize: 16,
+    fontWeight: '700',
     fontFamily: 'monospace',
+    color: colors.fnPurple,
+  },
+  tooltip: {
+    position: 'absolute',
+    backgroundColor: '#212121',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+    zIndex: 50,
+  },
+  tooltipText: {
+    color: '#dadada',
+    fontSize: 9,
+    fontFamily: 'monospace',
+  },
+  purpleDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(168, 130, 255, 0.5)',
   },
 });
 
