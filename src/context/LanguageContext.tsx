@@ -57,7 +57,7 @@ const translations: Record<Language, Record<string, string>> = {
     'more.hourRate': 'Hour Rate',
     'more.hourRateSubtitle': 'Track your earnings by hour',
     'more.bossExport': 'Boss Export',
-    'more.bossExportSubtitle': 'Export PDF or Excel report',
+    'more.bossExportSubtitle': 'Export to a well structured PDF file',
     'hourRate.title': 'Hour Rate',
     'hourRate.subtitle': 'Track your earnings by hour',
     'hourRate.setRate': 'Hourly Rate',
@@ -77,7 +77,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Boss Export
     'bossExport.title': 'Boss Export',
-    'bossExport.subtitle': 'Export PDF or Excel report',
+    'bossExport.subtitle': 'Export to a well structured PDF file',
     'bossExport.selectPeriod': 'Select Period',
     'bossExport.generate': 'Generate Report',
     'bossExport.generating': 'Generating...',
@@ -500,7 +500,7 @@ const translations: Record<Language, Record<string, string>> = {
     'more.hourRate': 'سعر الساعة',
     'more.hourRateSubtitle': 'تتبع أرباحك حسب الساعة',
     'more.bossExport': 'تصدير المدير',
-    'more.bossExportSubtitle': 'تصدير تقرير PDF أو Excel',
+    'more.bossExportSubtitle': 'تصدير ملف PDF منظم جيداً',
     'hourRate.title': 'سعر الساعة',
     'hourRate.subtitle': 'تتبع أرباحك حسب الساعة',
     'hourRate.setRate': 'سعر الساعة',
@@ -520,7 +520,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Boss Export
     'bossExport.title': 'تصدير المدير',
-    'bossExport.subtitle': 'تصدير تقرير PDF أو Excel',
+    'bossExport.subtitle': 'تصدير ملف PDF منظم جيداً',
     'bossExport.selectPeriod': 'اختر الفترة',
     'bossExport.generate': 'إنشاء تقرير',
     'bossExport.generating': 'جاري الإنشاء...',
