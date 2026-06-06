@@ -39,6 +39,7 @@ export const colors = {
 
   base00: '#1e1e1e',
   base05: '#212121',
+  base07: '#212121',
   base10: '#242424',
   base20: '#262626',
   base25: '#2a2a2a',

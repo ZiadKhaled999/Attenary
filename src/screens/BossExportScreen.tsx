@@ -8,7 +8,7 @@ import { useSupabase } from '../context/SupabaseContext';
 import { colors, borderRadius, fonts, shadows } from '../theme/colors';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import * as Print from 'expo-print';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -31,6 +31,43 @@ function getFilteredSessions(sessions: any[], selectedYear: string, selectedMont
 const BackIcon = ({ size = 24 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M19 12H5M12 19l-7-7 7-7" stroke={colors.textPrimary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const SaveIcon = ({ size = 22, color = colors.primary }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M7 10l5 5 5-5" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M12 15V3" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const WhatsAppIcon = ({ size = 22, color = '#25D366' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
+  </Svg>
+);
+
+const TelegramIcon = ({ size = 22, color = '#26A5B4' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M22 2L11 13" />
+    <Path d="M22 2l-7 20-4-9-9-4 20-7z" />
+  </Svg>
+);
+
+const GmailIcon = ({ size = 22, color = '#EA4335' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <Rect x="2" y="4" width="20" height="16" rx="2.5" />
+    <Path d="M2 8l10 6 10-6" />
+    <Path d="M2 8h20" />
+  </Svg>
+);
+
+const MoreIcon = ({ size = 22, color = colors.textSecondary }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="6" cy="12" r="2" fill={color} />
+    <Circle cx="12" cy="12" r="2" fill={color} />
+    <Circle cx="18" cy="12" r="2" fill={color} />
   </Svg>
 );
 
@@ -439,42 +476,40 @@ const BossExportScreen = () => {
           <Animated.View style={[styles.sheetOverlay, { opacity: sheetOpacity }]}>
             <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => closeSheet()} />
             <Animated.View style={[styles.sheetCardAnimated, { transform: [{ translateY: sheetTranslateY }] }]}>
-              <View style={styles.dragHandle} />
               <Text style={styles.sheetTitle}>{t('bossExport.shareTitle')}</Text>
               <Text style={styles.sheetSubtitle}>{t('bossExport.shareSubtitlePdf')}</Text>
-
-              <View style={styles.shareOptions}>
+              <View style={styles.shareRow}>
                 <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('save')}>
-                  <View style={[styles.shareIconBox, { backgroundColor: '#e2e8f0' }]}>
-                    <FileIcon size={20} color="#0f172a" />
+                  <View style={[styles.shareIconBox, { backgroundColor: 'rgba(139,108,239,0.18)' }]}>
+                    <SaveIcon size={22} color={colors.primary} />
                   </View>
                   <Text style={styles.shareLabel}>{t('bossExport.saveLocal')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('whatsapp')}>
-                  <View style={[styles.shareIconBox, { backgroundColor: '#dcfce7' }]}>
-                    <ShareIcon size={20} color="#166534" />
+                  <View style={[styles.shareIconBox, { backgroundColor: 'rgba(37,211,102,0.15)' }]}>
+                    <WhatsAppIcon size={22} color="#25D366" />
                   </View>
                   <Text style={styles.shareLabel}>{t('bossExport.whatsapp')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('telegram')}>
-                  <View style={[styles.shareIconBox, { backgroundColor: '#e0e7ff' }]}>
-                    <ShareIcon size={20} color="#3730a3" />
+                  <View style={[styles.shareIconBox, { backgroundColor: 'rgba(38,165,180,0.15)' }]}>
+                    <TelegramIcon size={22} color="#26A5B4" />
                   </View>
                   <Text style={styles.shareLabel}>{t('bossExport.telegram')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('gmail')}>
-                  <View style={[styles.shareIconBox, { backgroundColor: '#fee2e2' }]}>
-                    <ShareIcon size={20} color="#991b1b" />
+                  <View style={[styles.shareIconBox, { backgroundColor: 'rgba(234,67,53,0.14)' }]}>
+                    <GmailIcon size={22} color="#EA4335" />
                   </View>
                   <Text style={styles.shareLabel}>{t('bossExport.gmail')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption('native')}>
-                  <View style={[styles.shareIconBox, { backgroundColor: '#f1f5f9' }]}>
-                    <ShareIcon size={20} color="#0f172a" />
+                  <View style={[styles.shareIconBox, { backgroundColor: 'rgba(255,255,255,0.06)' }]}>
+                    <MoreIcon size={22} color={colors.textSecondary} />
                   </View>
                   <Text style={styles.shareLabel}>{t('bossExport.moreOptions')}</Text>
                 </TouchableOpacity>
@@ -520,13 +555,12 @@ const styles = StyleSheet.create({
   sheetOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', zIndex: 50 },
   sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.72)' },
   sheetCardAnimated: { backgroundColor: colors.bgMain, borderTopColor: colors.border, borderTopWidth: 1, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28 },
-  dragHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 18 },
   sheetTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.2, marginBottom: 4 },
   sheetSubtitle: { fontSize: 12, color: colors.textMuted, marginBottom: 18 },
-  shareOptions: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 20, columnGap: 8, justifyContent: 'center' },
-  shareOption: { width: '33.333%', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
-  shareIconBox: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  shareLabel: { fontSize: 10, fontWeight: '600', color: colors.textSecondary, textAlign: 'center' },
+  shareRow: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 16, columnGap: 10, justifyContent: 'space-between', paddingHorizontal: 16 },
+  shareOption: { flexBasis: '18%', alignItems: 'center', gap: 8, paddingVertical: 10, minWidth: 60 },
+  shareIconBox: { width: 52, height: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  shareLabel: { fontSize: 11, fontWeight: '600', color: colors.textSecondary, textAlign: 'center' },
 });
 
 export default BossExportScreen;
