@@ -51,6 +51,13 @@ export const colors = {
   base70: '#bababa',
   base100: '#dadada',
 
+  fnRed: '#fb464c',
+  fnOrange: '#e9973f',
+  fnYellow: '#e0de71',
+  fnGreen: '#44cf6e',
+  fnBlue: '#027aff',
+  fnPurple: '#a882ff',
+
   bgMain: '#1e1e1e',
   bgSecondary: '#212121',
   bgCard: '#242424',
