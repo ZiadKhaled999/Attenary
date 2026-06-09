@@ -13,7 +13,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { useTabBarVisibility } from '../context/TabBarVisibilityContext';
 import { useConvexSync } from '../context/ConvexContext';
-import { colors, spacing, fonts } from '../theme/colors';
+import { colors, spacing, fonts, shadows } from '../theme/colors';
 import { getDateString } from '../utils/timeUtils';
 import { getOrCreateDeviceId } from '../utils/deviceId';
 import Svg, { Line, Polyline, Rect } from 'react-native-svg';

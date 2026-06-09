@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -26,6 +26,7 @@ import CheckOutModal from '../components/CheckOutModal';
 import CustomTabBar from '../components/CustomTabBar';
 import { TabBarVisibilityProvider } from '../context/TabBarVisibilityContext';
 import { checkForUpdate, UpdateInfo } from '../utils/updateService';
+import { useApp } from '../context/AppContext';
 
 
 const Tab = createBottomTabNavigator();
@@ -67,10 +68,11 @@ type MainStackParamList = {
 };
 
 const Navigation = () => {
+  const { appData } = useApp();
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
-  const onboardingCompleted = false;
+  const onboardingCompleted = appData.onboardingCompleted;
 
   useEffect(() => {
     if (!onboardingCompleted && Platform.OS !== 'web') {

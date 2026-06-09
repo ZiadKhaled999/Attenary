@@ -1,13 +1,12 @@
-import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
+import { Platform } from 'react-native';
 import { ConvexReactClient } from 'convex/react';
 import NetInfo from '@react-native-community/netinfo';
 import { getOrCreateDeviceId } from '../utils/deviceId';
-import { dbPromise } from '../db/database';
 import { api } from '../../convex/_generated/api';
 
-const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
-  unsavedChangesWarning: false,
-});
+const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL || '';
+const convex = convexUrl ? new ConvexReactClient(convexUrl, { unsavedChangesWarning: false }) : null;
 
 interface ConvexContextType {
   deviceId: string | null;
@@ -22,11 +21,22 @@ const ConvexContext = createContext<ConvexContextType | null>(null);
 const SYNC_INTERVAL_MS = 10000;
 const MAX_RETRIES = 5;
 
+type QueueItem = {
+  id: string;
+  user_id: string;
+  entity_type: string;
+  entity_id: string;
+  operation: 'upsert' | 'delete';
+  payload: any;
+  created_at: number;
+};
+
 export function ConvexProvider({ children }: { children: React.ReactNode }) {
   const [deviceId, setDeviceId] = React.useState<string | null>(null);
   const [isOnline, setIsOnline] = React.useState(true);
   const [isSyncing, setIsSyncing] = React.useState(false);
   const syncTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const webQueueRef = useRef<QueueItem[]>([]);
 
   useEffect(() => {
     getOrCreateDeviceId().then(setDeviceId);
@@ -39,6 +49,14 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
     return unsub;
   }, []);
 
+  const enqueueWeb = useCallback((item: Omit<QueueItem, 'id' | 'created_at'>) => {
+    webQueueRef.current.push({
+      ...item,
+      id: `web_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      created_at: Date.now(),
+    });
+  }, []);
+
   const queueMutation = useCallback(async (
     entityType: string,
     entityId: string,
@@ -46,21 +64,96 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
     payload: any
   ) => {
     const uid = deviceId || await getOrCreateDeviceId();
-    const database = await dbPromise;
-    await database.runAsync(
-      `INSERT INTO sync_queue (user_id, entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [uid, entityType, entityId, operation, JSON.stringify(payload), Date.now()]
-    );
-  }, [deviceId]);
+
+    if (Platform.OS === 'web' || !convex) {
+      enqueueWeb({ user_id: uid, entity_type: entityType, entity_id: entityId, operation, payload });
+      return;
+    }
+
+    try {
+      const database = await import('../db/database').then(m => m.dbPromise).catch(() => null);
+      if (!database) {
+        enqueueWeb({ user_id: uid, entity_type: entityType, entity_id: entityId, operation, payload });
+        return;
+      }
+      await database.then(db => db.runAsync(
+        `INSERT INTO sync_queue (user_id, entity_type, entity_id, operation, payload, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [uid, entityType, entityId, operation, JSON.stringify(payload), Date.now()]
+      ));
+    } catch {
+      enqueueWeb({ user_id: uid, entity_type: entityType, entity_id: entityId, operation, payload });
+    }
+  }, [deviceId, enqueueWeb]);
+
+  const flushWebQueue = useCallback(async () => {
+    if (!convex || !isOnline || isSyncing) return;
+    const queue = webQueueRef.current;
+    if (queue.length === 0) return;
+
+    setIsSyncing(true);
+    const batch = queue.splice(0, 50);
+
+    try {
+      const byType = new Map<string, QueueItem[]>();
+      for (const item of batch) {
+        const list = byType.get(item.entity_type) || [];
+        list.push(item);
+        byType.set(item.entity_type, list);
+      }
+
+      for (const [entityType, items] of byType) {
+        if (entityType === 'profiles') {
+          for (const item of items) {
+            if (item.operation === 'upsert') {
+              await convex.mutation(api.profiles.upsert, { ...JSON.parse(item.payload), user_id: item.user_id });
+            }
+          }
+        } else if (entityType === 'feedbacks') {
+          for (const item of items) {
+            if (item.operation === 'upsert') {
+              await convex.mutation(api.feedbacks.insert, JSON.parse(item.payload));
+            }
+          }
+        } else if (entityType === 'app_settings') {
+          for (const item of items) {
+            if (item.operation === 'upsert') {
+              await convex.mutation(api.settings.upsert, JSON.parse(item.payload));
+            }
+          }
+        } else if (entityType === 'sessions') {
+          for (const item of items) {
+            if (item.operation === 'upsert') {
+              await convex.mutation(api.sessions.bulkUpsert, { items: [JSON.parse(item.payload)] });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Web sync flush failed:', err);
+      webQueueRef.current.unshift(...batch);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isOnline, isSyncing]);
 
   const drainQueue = useCallback(async () => {
     if (!deviceId || !isOnline || isSyncing) return;
 
+    if (Platform.OS === 'web' || !convex) {
+      await flushWebQueue();
+      return;
+    }
+
     setIsSyncing(true);
     let pending: any[] = [];
     try {
-      const database = await dbPromise;
+      const database = await import('../db/database').then(m => m.dbPromise).catch(() => null);
+      if (!database) {
+        await flushWebQueue();
+        setIsSyncing(false);
+        return;
+      }
 
       // Backfill: find local rows newer than watermark and queue them
       const watermarks = await database.getAllAsync<{ entity_type: string; last_synced_ts: number }>(
@@ -123,6 +216,11 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (!convex) {
+        setIsSyncing(false);
+        return;
+      }
+
       const result = await convex.action(api.sync.processQueue, {
         user_id: deviceId,
         items: pending.map((p) => ({
@@ -155,7 +253,8 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error('Sync drain failed:', err);
       if (pending.length > 0) {
-        const database = await dbPromise;
+        const database = await import('../db/database').then(m => m.dbPromise).catch(() => null);
+        if (!database) return;
         for (const item of pending) {
           await database.runAsync(
             `UPDATE sync_queue SET retry_count = retry_count + 1 WHERE id = ?`,

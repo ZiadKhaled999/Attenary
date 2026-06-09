@@ -72,7 +72,7 @@ const OnboardingScreen = () => {
   const navigation: any = useNavigation();
   const [profile, setProfile] = useState<any>(null);
   const { queueMutation } = useConvexSync();
-  const { setEmployeeName, setJobTitle, setDepartment } = useApp();
+  const { setEmployeeName, setEmail, setJobTitle, setDepartment, completeOnboarding } = useApp();
   const { setLanguage } = useLanguage();
 
   useEffect(() => {
@@ -241,6 +241,7 @@ const validateCurrentStep = (): boolean => {
         setProfile((prev: any) => ({ ...prev, department: normalized, updated_at: Date.now() }));
         break;
       case 'email':
+        await setEmail(normalized);
         setProfile((prev: any) => ({ ...prev, email: normalized, updated_at: Date.now() }));
         break;
     }
@@ -318,6 +319,7 @@ const validateCurrentStep = (): boolean => {
       };
 
       setProfile((prev: any) => ({ ...prev, ...onboardingPayload, onboarding_completed: true, updated_at: Date.now() }));
+      await completeOnboarding();
       if (deviceId) {
         await queueMutation('profiles', deviceId, 'upsert', {
           user_id: deviceId,

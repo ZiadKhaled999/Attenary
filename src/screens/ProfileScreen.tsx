@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Image, Animated, Dimensions, Easing } from 'react-native';
+import { useApp } from '../context/AppContext';
 import { useConvexSync } from '../context/ConvexContext';
 import { colors, spacing, borderRadius, fonts, shadows } from '../theme/colors';
 import Svg, { Path } from 'react-native-svg';
@@ -23,8 +24,8 @@ const DepartmentIcon = ({ size = 24 }: { size?: number }) => (
   <Image source={require('../../assets/icons/department.png')} style={{ width: size, height: size }} resizeMode="contain" />
 );
 
-const ProfileAvatar = ({ size = 24 }: { size?: number }) => {
-  const avatarUrl = '';
+const ProfileAvatar = ({ size = 24, url }: { size?: number; url?: string | null }) => {
+  const avatarUrl = url || '';
   if (avatarUrl) {
     return <Image source={{ uri: avatarUrl }} style={{ width: size, height: size, borderRadius: size / 2 }} resizeMode="cover" />;
   }
@@ -38,10 +39,11 @@ const EditIcon = ({ size = 16, color = colors.textPrimary }: { size?: number; co
 );
 
 const ProfileScreen = () => {
-  const [profile, setProfile] = useState<any>(null);
+  const { appData, saveData } = useApp();
   const { queueMutation } = useConvexSync();
   const { t } = useLanguage();
   const { setVisible } = useTabBarVisibility();
+  const [profile, setProfile] = useState<any>(null);
   const [nameModalVisible, setNameModalVisible] = useState(false);
   const [jobTitleModalVisible, setJobTitleModalVisible] = useState(false);
   const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
@@ -50,10 +52,41 @@ const ProfileScreen = () => {
   const [department, setDepartmentInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     getOrCreateDeviceId().then(setDeviceId);
   }, []);
+
+  useEffect(() => {
+    setProfile((prev: any) => {
+      if (prev && (prev.full_name || prev.email || prev.job_title || prev.department)) {
+        return prev;
+      }
+      const source = {
+        full_name: appData.employeeName,
+        email: appData.email,
+        job_title: appData.jobTitle,
+        department: appData.department,
+        avatar_url: avatarUrl,
+        language: appData.appSettings?.language,
+        onboarding_completed: appData.onboardingCompleted,
+        created_at: Date.now(),
+        updated_at: Date.now(),
+      };
+      const merged = { ...prev, ...source };
+      return Object.values(merged).some(v => v) ? merged : prev;
+    });
+  }, [appData.employeeName, appData.email, appData.jobTitle, appData.department, avatarUrl]);
+
+  const syncProfileToConvex = async (updates: any) => {
+    if (!deviceId) return;
+    await queueMutation('profiles', deviceId, 'upsert', {
+      user_id: deviceId,
+      ...updates,
+      updated_at: Date.now(),
+    });
+  };
 
   const nameSlideAnim = useRef(new Animated.Value(1)).current;
   const jobSlideAnim = useRef(new Animated.Value(1)).current;
@@ -101,13 +134,14 @@ const ProfileScreen = () => {
     setSaving(true);
     const updates = { [field]: value };
     setProfile((prev: any) => ({ ...prev, ...updates, updated_at: Date.now() }));
-    if (deviceId) {
-      await queueMutation('profiles', deviceId, 'upsert', {
-        user_id: deviceId,
-        ...updates,
-        updated_at: Date.now(),
-      });
+    if (field === 'full_name') {
+      setEmployeeNameInput(value);
+    } else if (field === 'job_title') {
+      setJobTitleInput(value);
+    } else if (field === 'department') {
+      setDepartmentInput(value);
     }
+    await syncProfileToConvex(updates);
     setSaving(false);
   };
 
@@ -121,15 +155,10 @@ const ProfileScreen = () => {
     if (result.canceled || !result.assets?.length) return;
     const asset = result.assets[0];
     setSaving(true);
-
-    setProfile((prev: any) => ({ ...prev, avatar_url: asset.uri, updated_at: Date.now() }));
-    if (deviceId) {
-      await queueMutation('profiles', deviceId, 'upsert', {
-        user_id: deviceId,
-        avatar_url: asset.uri,
-        updated_at: Date.now(),
-      });
-    }
+    const newUrl = asset.uri;
+    setAvatarUrl(newUrl);
+    setProfile((prev: any) => ({ ...prev, avatar_url: newUrl, updated_at: Date.now() }));
+    await syncProfileToConvex({ avatar_url: newUrl });
     setSaving(false);
   };
 
@@ -165,7 +194,7 @@ const ProfileScreen = () => {
           <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.85}>
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
-                <ProfileAvatar size={80} />
+                <ProfileAvatar size={80} url={profile?.avatar_url} />
               </View>
               <View style={styles.editBadge}>
                 <EditIcon size={14} color={colors.bgMain} />
