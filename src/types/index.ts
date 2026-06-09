@@ -12,6 +12,7 @@ export interface AppData {
   email: string;
   jobTitle: string;
   department: string;
+  avatarUrl: string;
   onboardingCompleted: boolean;
   onboardingProgress: {
     currentStep: number;

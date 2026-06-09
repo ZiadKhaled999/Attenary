@@ -59,8 +59,12 @@ const ProfileScreen = () => {
   }, []);
 
   useEffect(() => {
+    setAvatarUrl(appData.avatarUrl || null);
+  }, [appData.avatarUrl]);
+
+  useEffect(() => {
     setProfile((prev: any) => {
-      if (prev && (prev.full_name || prev.email || prev.job_title || prev.department)) {
+      if (prev && (prev.full_name || prev.email || prev.job_title || prev.department || prev.avatar_url)) {
         return prev;
       }
       const source = {
@@ -68,7 +72,7 @@ const ProfileScreen = () => {
         email: appData.email,
         job_title: appData.jobTitle,
         department: appData.department,
-        avatar_url: avatarUrl,
+        avatar_url: avatarUrl || appData.avatarUrl,
         language: appData.appSettings?.language,
         onboarding_completed: appData.onboardingCompleted,
         created_at: Date.now(),
@@ -77,7 +81,7 @@ const ProfileScreen = () => {
       const merged = { ...prev, ...source };
       return Object.values(merged).some(v => v) ? merged : prev;
     });
-  }, [appData.employeeName, appData.email, appData.jobTitle, appData.department, avatarUrl]);
+  }, [appData.employeeName, appData.email, appData.jobTitle, appData.department, avatarUrl, appData.avatarUrl]);
 
   const syncProfileToConvex = async (updates: any) => {
     if (!deviceId) return;

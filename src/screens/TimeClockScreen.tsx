@@ -125,7 +125,6 @@ const TimeClockScreen = () => {
 
   const handleCheckIn = async () => {
     await checkIn();
-    if (!deviceId) return;
     const newSession = appData.sessions.find((s: any) => s.checkOutTime === null);
     if (!newSession) return;
     await queueMutation('sessions', String(newSession.sessionId), 'upsert', {
@@ -150,7 +149,7 @@ const TimeClockScreen = () => {
     const reason = selectedReason || customReason.trim() || undefined;
     const sessionId = activeSession?.sessionId;
     await checkOut(reason);
-    if (deviceId && sessionId) {
+    if (sessionId) {
       await queueMutation('sessions', String(sessionId), 'upsert', {
         user_id: deviceId,
         check_in_time: activeSession?.checkInTime ?? Date.now(),
@@ -169,7 +168,7 @@ const TimeClockScreen = () => {
   const skipAndFinish = async () => {
     const sessionId = activeSession?.sessionId;
     await checkOut('Skipped');
-    if (deviceId && sessionId) {
+    if (sessionId) {
       await queueMutation('sessions', String(sessionId), 'upsert', {
         user_id: deviceId,
         check_in_time: activeSession?.checkInTime ?? Date.now(),

@@ -72,7 +72,7 @@ const OnboardingScreen = () => {
   const navigation: any = useNavigation();
   const [profile, setProfile] = useState<any>(null);
   const { queueMutation } = useConvexSync();
-  const { setEmployeeName, setEmail, setJobTitle, setDepartment, completeOnboarding } = useApp();
+  const { setEmployeeName, setEmail, setJobTitle, setDepartment, setAvatarUrl, completeOnboarding } = useApp();
   const { setLanguage } = useLanguage();
 
   useEffect(() => {
@@ -260,9 +260,10 @@ const validateCurrentStep = (): boolean => {
     const asset = result.assets[0];
     setUploadingAvatar(true);
     
-    // Store the local URI directly - it will show in the app
-    console.log('OnboardingScreen: Setting avatar from', asset.uri);
-    setProfile((prev: any) => ({ ...prev, avatar_url: asset.uri, updated_at: Date.now() }));
+    const uri = asset.uri;
+    console.log('OnboardingScreen: Setting avatar from', uri);
+    setProfile((prev: any) => ({ ...prev, avatar_url: uri, updated_at: Date.now() }));
+    await setAvatarUrl(uri);
     
     console.log('OnboardingScreen: Avatar updated successfully');
     setUploadingAvatar(false);
@@ -320,13 +321,17 @@ const validateCurrentStep = (): boolean => {
 
       setProfile((prev: any) => ({ ...prev, ...onboardingPayload, onboarding_completed: true, updated_at: Date.now() }));
       await completeOnboarding();
-      if (deviceId) {
-        await queueMutation('profiles', deviceId, 'upsert', {
-          user_id: deviceId,
-          ...onboardingPayload,
-          updated_at: Date.now(),
-        });
-      }
+      await queueMutation('profiles', deviceId, 'upsert', {
+        user_id: deviceId,
+        email: onboardingPayload.email ?? null,
+        full_name: onboardingPayload.full_name,
+        job_title: onboardingPayload.job_title ?? null,
+        department: onboardingPayload.department ?? null,
+        avatar_url: onboardingPayload.avatar_url ?? null,
+        language: onboardingPayload.language ?? null,
+        onboarding_completed: true,
+        updated_at: Date.now(),
+      });
       navigation.replace('Main');
     }
   };

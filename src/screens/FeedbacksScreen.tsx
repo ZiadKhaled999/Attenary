@@ -23,7 +23,6 @@ import Svg, { Path } from 'react-native-svg';
 import { useConvexSync } from '../context/ConvexContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getOrCreateDeviceId } from '../utils/deviceId';
-import { openDb } from '../db/database';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -119,13 +118,7 @@ const FeedbacksScreen = () => {
 
     try {
       if (deviceId) {
-      const database = await openDb() as any;
-      const result = await database.runAsync(
-        `INSERT INTO feedbacks (user_id, type, email, content, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-        [deviceId, feedbackType, null, feedback.trim(), null, Date.now()]
-      );
-      const localId = result as number;
-      await queueMutation('feedbacks', String(localId), 'upsert', {
+        await queueMutation('feedbacks', deviceId, 'upsert', {
           user_id: deviceId,
           type: feedbackType,
           email: null,

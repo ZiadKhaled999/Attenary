@@ -17,6 +17,7 @@ interface AppContextType {
   setJobTitle: (jobTitle: string) => Promise<void>;
   setDepartment: (department: string) => Promise<void>;
   setHourRate: (rate: number) => Promise<void>;
+  setAvatarUrl: (url: string) => Promise<void>;
   addSessions: (sessions: Session[]) => Promise<boolean>;
   completeOnboarding: () => Promise<void>;
   updateOnboardingProgress: (step: number) => Promise<void>;
@@ -53,6 +54,7 @@ export const Provider = ({ children }: AppProviderProps) => {
     email: '',
     jobTitle: '',
     department: '',
+    avatarUrl: '',
     onboardingCompleted: false,
     onboardingProgress: {
       currentStep: 0,
@@ -110,6 +112,7 @@ export const Provider = ({ children }: AppProviderProps) => {
             email: parsed.email || '',
             jobTitle: parsed.jobTitle || '',
             department: parsed.department || '',
+            avatarUrl: parsed.avatarUrl || '',
             onboardingCompleted: parsed.onboardingCompleted || false,
             onboardingProgress: parsed.onboardingProgress || { currentStep: 0, completedSteps: [], lastVisited: Date.now() },
             appSettings: parsed.appSettings || { theme: 'dark', notifications: true },
@@ -163,6 +166,11 @@ export const Provider = ({ children }: AppProviderProps) => {
 
   const setDepartment = async (department: string) => {
     setAppData((prev) => ({ ...prev, department }));
+    await saveData();
+  };
+
+  const setAvatarUrl = async (url: string) => {
+    setAppData((prev) => ({ ...prev, avatarUrl: url }));
     await saveData();
   };
 
@@ -459,7 +467,7 @@ export const Provider = ({ children }: AppProviderProps) => {
   const value = {
     appData, loading, storageError,
     saveData, loadData, checkIn, checkOut,
-    setEmployeeName, setEmail, setJobTitle, setDepartment, setHourRate,
+    setEmployeeName, setEmail, setJobTitle, setDepartment, setHourRate, setAvatarUrl,
     addSessions, completeOnboarding, updateOnboardingProgress, resetOnboardingProgress,
     clearStorageError, deleteSession, updateSessionReason,
     createBackup, saveBackup, getStoredBackup,
