@@ -321,6 +321,7 @@ export const Provider = ({ children }: AppProviderProps) => {
           email: false,
           jobTitle: false,
           department: false,
+          hourRate: false,
           onboardingProgress: false,
           appSettings: false,
         },
@@ -351,6 +352,7 @@ export const Provider = ({ children }: AppProviderProps) => {
           email: false,
           jobTitle: false,
           department: false,
+          hourRate: false,
           onboardingProgress: false,
           appSettings: false,
         },
@@ -397,6 +399,7 @@ export const Provider = ({ children }: AppProviderProps) => {
           email: false,
           jobTitle: false,
           department: false,
+          hourRate: false,
           onboardingProgress: false,
           appSettings: false,
         },
@@ -416,6 +419,7 @@ export const Provider = ({ children }: AppProviderProps) => {
         email: backup.data.email || prev.email,
         jobTitle: backup.data.jobTitle || prev.jobTitle,
         department: backup.data.department || prev.department,
+        hourRate: backup.data.hourRate ?? prev.hourRate,
         onboardingCompleted: backup.data.onboardingCompleted ?? prev.onboardingCompleted,
         onboardingProgress: backup.data.onboardingProgress || prev.onboardingProgress,
         appSettings: backup.data.appSettings || prev.appSettings,
@@ -424,43 +428,45 @@ export const Provider = ({ children }: AppProviderProps) => {
       const saved = await saveData();
       if (!saved) throw new Error('Failed to save restored data');
 
-      return {
-        valid: true,
-        schemaVersion: backup.header.schemaVersion,
-        appVersion: backup.header.appVersion,
-        recordCounts: {
-          sessions: { new: importedSessions, duplicate: skippedSessions, conflicting: 0 },
-          employeeName: !!backup.data.employeeName,
-          email: !!backup.data.email,
-          jobTitle: !!backup.data.jobTitle,
-          department: !!backup.data.department,
-          onboardingProgress: !!backup.data.onboardingProgress,
-          appSettings: !!backup.data.appSettings,
-        },
-        totalNewRecords: importedSessions,
-        totalDuplicate: skippedSessions,
-        totalConflicting: 0,
-      };
+    return {
+      valid: true,
+      schemaVersion: backup.header.schemaVersion,
+      appVersion: backup.header.appVersion,
+      recordCounts: {
+        sessions: { new: importedSessions, duplicate: skippedSessions, conflicting: 0 },
+        employeeName: !!backup.data.employeeName,
+        email: !!backup.data.email,
+        jobTitle: !!backup.data.jobTitle,
+        department: !!backup.data.department,
+        hourRate: backup.data.hourRate > 0,
+        onboardingProgress: !!backup.data.onboardingProgress,
+        appSettings: !!backup.data.appSettings,
+      },
+      totalNewRecords: importedSessions,
+      totalDuplicate: skippedSessions,
+      totalConflicting: 0,
+    };
     } catch (error) {
       setAppData(previousData);
-      return {
-        valid: false,
-        schemaVersion: backup.header.schemaVersion,
-        appVersion: backup.header.appVersion,
-        recordCounts: {
-          sessions: { new: 0, duplicate: 0, conflicting: 0 },
-          employeeName: false,
-          email: false,
-          jobTitle: false,
-          department: false,
-          onboardingProgress: false,
-          appSettings: false,
-        },
-        totalNewRecords: 0,
-        totalDuplicate: 0,
-        totalConflicting: 0,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+    return {
+      valid: false,
+      schemaVersion: backup?.header?.schemaVersion || 'unknown',
+      appVersion: backup?.header?.appVersion || 'unknown',
+      recordCounts: {
+        sessions: { new: 0, duplicate: 0, conflicting: 0 },
+        employeeName: false,
+        email: false,
+        jobTitle: false,
+        department: false,
+        hourRate: false,
+        onboardingProgress: false,
+        appSettings: false,
+      },
+      totalNewRecords: 0,
+      totalDuplicate: 0,
+      totalConflicting: 0,
+      error: validation.error,
+    };
     }
   };
 

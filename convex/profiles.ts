@@ -11,6 +11,13 @@ export const get = query({
   },
 });
 
+export const listAll = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("profiles").collect();
+  },
+});
+
 export const upsert = mutation({
   args: {
     user_id: v.string(),

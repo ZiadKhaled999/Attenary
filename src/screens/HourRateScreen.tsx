@@ -2,8 +2,10 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Modal, Alert, TextInput, FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
+import { useConvexSync } from '../context/ConvexContext';
 import { useLanguage } from '../context/LanguageContext';
 import { colors, borderRadius, fonts, shadows, spacing } from '../theme/colors';
+import { getOrCreateDeviceId } from '../utils/deviceId';
 import Svg, { Path } from 'react-native-svg';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -129,7 +131,9 @@ const ChevronDownIcon = ({ size = 16 }: { size?: number }) => (
 const HourRateScreen = () => {
   const navigation = useNavigation<any>();
   const { appData, setHourRate } = useApp();
+  const { queueMutation } = useConvexSync();
   const { t } = useLanguage();
+  const [deviceId, setDeviceId] = useState<string | null>(null);
 
   const sessions = appData.sessions ?? [];
 
@@ -152,6 +156,10 @@ const HourRateScreen = () => {
   const [showCurrencySheet, setShowCurrencySheet] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchTimer = useRef<any>(null);
+
+  useEffect(() => {
+    getOrCreateDeviceId().then(setDeviceId);
+  }, []);
 
   const monthSessions = useMemo(() => {
     return sessions.filter((s: any) => {
@@ -183,6 +191,17 @@ const HourRateScreen = () => {
     );
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (deviceId && appData.hourRate > 0) {
+      queueMutation('app_settings', deviceId, 'upsert', {
+        user_id: deviceId,
+        hour_rate: appData.hourRate,
+        currency: selectedCurrency.code,
+        updated_at: Date.now(),
+      }).catch(() => {});
+    }
+  }, [selectedCurrency.code, deviceId, appData.hourRate, queueMutation]);
+
   const handleSearchChange = useCallback((text: string) => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => setSearchQuery(text), 80);
@@ -205,9 +224,17 @@ const HourRateScreen = () => {
       return;
     }
     await setHourRate(parsed);
+    if (deviceId) {
+      await queueMutation('app_settings', deviceId, 'upsert', {
+        user_id: deviceId,
+        hour_rate: parsed,
+        currency: selectedCurrency.code,
+        updated_at: Date.now(),
+      });
+    }
     setIsEditingRate(false);
     Alert.alert(t('common.success'), t('hourRate.saved'));
-  }, [hourRate, setHourRate, t]);
+  }, [hourRate, setHourRate, queueMutation, deviceId, selectedCurrency.code, t]);
 
   const handleSelectCurrency = useCallback((item) => {
     setSelectedCurrency(item);

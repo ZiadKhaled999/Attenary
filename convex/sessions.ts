@@ -11,6 +11,13 @@ export const getByUser = query({
   },
 });
 
+export const listAll = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("sessions").collect();
+  },
+});
+
 export const bulkUpsert = mutation({
   args: {
     items: v.array(v.object({

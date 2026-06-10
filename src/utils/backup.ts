@@ -221,6 +221,7 @@ export async function previewRestore(
       email: !!backup.data.email,
       jobTitle: !!backup.data.jobTitle,
       department: !!backup.data.department,
+      hourRate: !!backup.data.hourRate,
       onboardingProgress: !!backup.data.onboardingProgress,
       appSettings: !!backup.data.appSettings,
     },
@@ -237,8 +238,8 @@ export async function performRestore(
 ): Promise<RestoreResult> {
   const preview = await previewRestore(backup, currentData);
   
-  if (!preview.valid) {
-    return { success: false, error: preview.error, imported: { sessions: 0, employeeName: false, email: false, jobTitle: false, department: false, onboardingProgress: false, appSettings: false }, skipped: { sessions: 0 } };
+    if (!preview.valid) {
+    return { success: false, error: preview.error, imported: { sessions: 0, employeeName: false, email: false, jobTitle: false, department: false, hourRate: false, onboardingProgress: false, appSettings: false }, skipped: { sessions: 0 } };
   }
 
   if (options.dryRun) {
@@ -250,6 +251,7 @@ export async function performRestore(
         email: false,
         jobTitle: false,
         department: false,
+        hourRate: false,
         onboardingProgress: false,
         appSettings: false,
       },
@@ -282,17 +284,18 @@ export async function performRestore(
     }
   }
 
-  return {
-    success: true,
-    imported: {
-      sessions: sessionsToAdd.length,
-      employeeName: false,
-      email: false,
-      jobTitle: false,
-      department: false,
-      onboardingProgress: false,
-      appSettings: false,
-    },
+    return {
+      success: true,
+      imported: {
+        sessions: sessionsToAdd.length,
+        employeeName: false,
+        email: false,
+        jobTitle: false,
+        department: false,
+        hourRate: backup.data.hourRate > 0,
+        onboardingProgress: false,
+        appSettings: false,
+      },
     skipped: {
       sessions: skippedCount,
     },

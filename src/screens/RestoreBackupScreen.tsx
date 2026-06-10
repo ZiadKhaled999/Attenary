@@ -38,7 +38,7 @@ const UploadIcon = ({ size = 18 }: { size?: number }) => (
 const RestoreBackupScreen = () => {
   const navigation = useNavigation<any>();
   const { t } = useLanguage();
-  const { importBackupFromFile, previewImport, restoreBackup, loading } = useApp();
+  const { importBackupFromFile, previewImport, restoreBackup, loading, getStoredBackup } = useApp();
   const [isImporting, setIsImporting] = useState(false);
   const [preview, setPreview] = useState<RestorePreview | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -53,18 +53,25 @@ const RestoreBackupScreen = () => {
     setIsImporting(true);
 
     try {
-      const backup = await importBackupFromFile();
+      let backup = selectedBackup;
       if (!backup) {
-        return;
+        backup = await importBackupFromFile();
+        if (!backup) {
+          setIsImporting(false);
+          return;
+        }
+        setSelectedBackup(backup);
+        setSelectedFilename((backup as any).fileName || 'backup-file.json');
+        setSelectedFilesize((backup as any).size || 0);
+      } else {
+        backup = selectedBackup;
       }
-
-      setSelectedBackup(backup);
-      setSelectedFilename((backup as any).fileName || 'backup-file.json');
-      setSelectedFilesize((backup as any).size || 0);
 
       const previewResult = await previewImport(backup);
       if (!previewResult.valid) {
         setSelectedBackup(null);
+        setPreview(null);
+        Alert.alert(t('common.error'), previewResult.error || t('backup.restoreFailed'));
       } else {
         setPreview(previewResult);
         setShowPreviewModal(true);
@@ -147,12 +154,13 @@ const RestoreBackupScreen = () => {
               <View style={styles.previewRow}><Text style={styles.previewLabel}>{t('backup.conflictingRecords')}</Text><Text style={[styles.previewValue, preview.totalConflicting > 0 && styles.previewValueConflict]}>{preview.totalConflicting}</Text></View>
               <Text style={styles.previewSubtitle}>{t('backup.dataTypes')}</Text>
               <View style={styles.dataTypesContainer}>
-                {preview.recordCounts.employeeName && <Text style={styles.dataTypeChip}>{t('profile.employeeName')}</Text>}
-                {preview.recordCounts.email && <Text style={styles.dataTypeChip}>{t('profile.email')}</Text>}
-                {preview.recordCounts.jobTitle && <Text style={styles.dataTypeChip}>{t('profile.jobTitle')}</Text>}
-                {preview.recordCounts.department && <Text style={styles.dataTypeChip}>{t('profile.department')}</Text>}
-                {preview.recordCounts.onboardingProgress && <Text style={styles.dataTypeChip}>{t('nav.profile')}</Text>}
-                {preview.recordCounts.appSettings && <Text style={styles.dataTypeChip}>{t('common.settings')}</Text>}
+              {preview.recordCounts.employeeName && <Text style={styles.dataTypeChip}>{t('profile.employeeName')}</Text>}
+              {preview.recordCounts.email && <Text style={styles.dataTypeChip}>{t('profile.email')}</Text>}
+              {preview.recordCounts.jobTitle && <Text style={styles.dataTypeChip}>{t('profile.jobTitle')}</Text>}
+              {preview.recordCounts.department && <Text style={styles.dataTypeChip}>{t('profile.department')}</Text>}
+              {preview.recordCounts.hourRate && <Text style={styles.dataTypeChip}>Hour Rate</Text>}
+              {preview.recordCounts.onboardingProgress && <Text style={styles.dataTypeChip}>{t('nav.profile')}</Text>}
+              {preview.recordCounts.appSettings && <Text style={styles.dataTypeChip}>{t('common.settings')}</Text>}
               </View>
             </View>
           )}

@@ -105,10 +105,12 @@ const init = async (db: SQLite.SQLiteDatabase) => {
     created_at INTEGER NOT NULL
   );
   CREATE TABLE IF NOT EXISTS sync_watermark (
-    entity_type TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    last_synced_ts INTEGER NOT NULL
+    entity_type TEXT NOT NULL,
+    last_synced_ts INTEGER NOT NULL,
+    PRIMARY KEY (user_id, entity_type)
   );
+  CREATE INDEX IF NOT EXISTS idx_sync_watermark_user ON sync_watermark(user_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
   CREATE INDEX IF NOT EXISTS idx_sync_queue_pending ON sync_queue(user_id, processed_at);
   `);
@@ -116,6 +118,30 @@ const init = async (db: SQLite.SQLiteDatabase) => {
     await db.runAsync(`ALTER TABLE sessions ADD COLUMN reason_edited_at INTEGER`);
   } catch {
     // column already exists — ignore
+  }
+  try {
+    const schemaRows = await db.getAllAsync<any>(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='sync_watermark'"
+    );
+    const createSql = schemaRows[0]?.sql || '';
+    if (createSql.includes('entity_type TEXT PRIMARY KEY') && !createSql.includes('user_id, entity_type')) {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS sync_watermark_v2 (
+          user_id TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          last_synced_ts INTEGER NOT NULL,
+          PRIMARY KEY (user_id, entity_type)
+        )
+      `);
+      await db.runAsync(`
+        INSERT OR IGNORE INTO sync_watermark_v2 (user_id, entity_type, last_synced_ts)
+        SELECT user_id, entity_type, last_synced_ts FROM sync_watermark
+      `);
+      await db.runAsync(`DROP TABLE sync_watermark`);
+      await db.execAsync(`ALTER TABLE sync_watermark_v2 RENAME TO sync_watermark`);
+    }
+  } catch {
+    // migration failed — table may already be in correct shape
   }
 }
 

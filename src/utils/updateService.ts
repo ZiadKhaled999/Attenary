@@ -9,7 +9,7 @@ export interface UpdateInfo {
 
 const UPDATE_CONFIG = {
   checkUrl: 'https://raw.githubusercontent.com/orynos/attenary/main/update.json',
-  currentVersion: '2.4.33',
+  currentVersion: '3.23.7',
 };
 
 export const checkForUpdate = async (): Promise<UpdateInfo | null> => {

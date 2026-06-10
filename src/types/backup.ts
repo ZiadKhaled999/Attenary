@@ -55,6 +55,7 @@ export interface RestorePreview {
     email: boolean;
     jobTitle: boolean;
     department: boolean;
+    hourRate: boolean;
     onboardingProgress: boolean;
     appSettings: boolean;
   };
