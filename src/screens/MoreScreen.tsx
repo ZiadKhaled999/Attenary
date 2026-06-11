@@ -199,7 +199,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: spacing.huge,
     paddingTop: spacing.xl,
-    flexGrow: 1,
     justifyContent: 'center',
   },
   headerSection: {
