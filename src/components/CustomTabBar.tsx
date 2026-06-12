@@ -55,7 +55,7 @@ const FLUID_SPRING = {
 
 // ─── Jelly keyframes: scaleX(1.15/0.9) → scaleY(0.85/1.05) ─────────────────
 function runJelly(scaleX: Animated.Value, scaleY: Animated.Value) {
-  Animated.sequence([
+  return Animated.sequence([
     Animated.parallel([
       Animated.timing(scaleX, { toValue: 1.15, duration: 120, useNativeDriver: true }),
       Animated.timing(scaleY, { toValue: 0.85, duration: 120, useNativeDriver: true }),
@@ -68,7 +68,7 @@ function runJelly(scaleX: Animated.Value, scaleY: Animated.Value) {
       Animated.timing(scaleX, { toValue: 1,    duration: 80,  useNativeDriver: true }),
       Animated.timing(scaleY, { toValue: 1,    duration: 80,  useNativeDriver: true }),
     ]),
-  ]).start();
+  ]);
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -125,14 +125,17 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
       pillTop.setValue(layout.y);
       pillWidth.setValue(layout.width);
       pillHeight.setValue(layout.height);
+      pillScaleX.setValue(1);
+      pillScaleY.setValue(1);
     } else {
       Animated.parallel([
         Animated.spring(pillLeft,   { toValue: layout.x,      ...FLUID_SPRING }),
         Animated.spring(pillTop,    { toValue: layout.y,      ...FLUID_SPRING }),
         Animated.spring(pillWidth,  { toValue: layout.width,  ...FLUID_SPRING }),
         Animated.spring(pillHeight, { toValue: layout.height, ...FLUID_SPRING }),
-      ]).start();
-      runJelly(pillScaleX, pillScaleY);
+      ]).start(() => {
+        runJelly(pillScaleX, pillScaleY).start();
+      });
     }
   }
 

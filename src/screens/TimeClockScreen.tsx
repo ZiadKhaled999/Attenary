@@ -397,6 +397,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    maxHeight: '100%',
   },
   contentContainer: {
     padding: spacing.lg,

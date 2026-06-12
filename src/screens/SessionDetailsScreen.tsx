@@ -253,7 +253,7 @@ const SessionDetailsScreen: React.FC<SessionDetailsScreenProps> = ({ route }) =>
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: padH, paddingVertical: padV, paddingBottom: 60, flexGrow: 1 }}
+        contentContainerStyle={{ paddingHorizontal: padH, paddingVertical: padV, paddingBottom: 60 }}
         showsVerticalScrollIndicator={false}
       >
         <View style={[S.inner, { maxWidth: cardMaxW, alignSelf: 'center', width: '100%', gap: cardGap }, isRTL && { direction: 'rtl' }]}>

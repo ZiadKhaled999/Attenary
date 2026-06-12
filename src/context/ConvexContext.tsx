@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
-import { Platform } from 'react-native';
+import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import { Platform, AppState } from 'react-native';
 import { ConvexReactClient } from 'convex/react';
 import NetInfo from '@react-native-community/netinfo';
 import { getOrCreateDeviceId } from '../utils/deviceId';
@@ -16,8 +16,8 @@ console.log('[Convex] client created:', !!convex);
 if (convex) {
   (async () => {
     try {
-      await convex.query(api.profiles.get, { user_id: '__attenary_health_check__' });
-      console.log('[Convex] health-check: client is reachable');
+      const result = await convex.query(api.profiles.listAll, {} as never);
+      console.log('[Convex] health-check OK: listAll returned', result?.length ?? 0, 'profiles');
     } catch (e) {
       console.error('[Convex] health-check FAILED:', e instanceof Error ? e.message : e);
     }
@@ -52,8 +52,22 @@ const QUEUE_STORAGE_KEY = 'convex_sync_queue';
 const loadWebQueue = (): QueueItem[] => {
   try {
     const raw = localStorage.getItem(QUEUE_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+    const parsed = raw ? JSON.parse(raw) : [];
+    return parsed.filter((item: QueueItem) => {
+      const p = item.payload;
+      if (p === '[object Object]') return false;
+      if (typeof p !== 'string') return true;
+      try {
+        JSON.parse(p);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+  } catch {
+    try { localStorage.removeItem(QUEUE_STORAGE_KEY); } catch {}
+    return [];
+  }
 };
 
 const saveWebQueue = (queue: QueueItem[]) => {
@@ -83,51 +97,17 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
   const enqueueWeb = useCallback((item: Omit<QueueItem, 'id' | 'created_at'>) => {
     webQueueRef.current.push({
       ...item,
+      payload: typeof item.payload === 'string' ? item.payload : JSON.stringify(item.payload),
       id: `web_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       created_at: Date.now(),
     });
     saveWebQueue(webQueueRef.current);
   }, []);
 
-  const queueMutation = useCallback(async (
-    entityType: string,
-    entityId: string,
-    operation: 'upsert' | 'delete',
-    payload: any
-  ) => {
-    const uid = deviceId || await getOrCreateDeviceId();
-    if (!uid) {
-      console.error('[Convex] queueMutation ABORTED: deviceId is null/empty. Mutation cannot be assigned a user_id. Payload:', entityType, entityId);
-      return;
-    }
-    console.log('[Convex] queueMutation:', entityType, entityId, 'web=', Platform.OS === 'web', 'convex=', !!convex, 'uid=', uid.slice(0, 12));
-
-    if (Platform.OS === 'web' || !convex) {
-      enqueueWeb({ user_id: uid, entity_type: entityType, entity_id: entityId, operation, payload });
-      console.log('[Convex] enqueued to webQueue, size=', webQueueRef.current.length);
-      return;
-    }
-
-    try {
-      const database = await import('../db/database').then(m => m.dbPromise).catch(() => null);
-      if (!database) {
-        enqueueWeb({ user_id: uid, entity_type: entityType, entity_id: entityId, operation, payload });
-        return;
-      }
-      await database.then(db => db.runAsync(
-        `INSERT INTO sync_queue (user_id, entity_type, entity_id, operation, payload, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [uid, entityType, entityId, operation, JSON.stringify(payload), Date.now()]
-      ));
-    } catch {
-      enqueueWeb({ user_id: uid, entity_type: entityType, entity_id: entityId, operation, payload });
-    }
-  }, [deviceId, enqueueWeb]);
-
   const flushWebQueue = useCallback(async () => {
     console.log('[Convex] flushWebQueue start: convex=', !!convex, 'isOnline=', isOnline, 'isSyncing=', isSyncing, 'queueSize=', webQueueRef.current.length);
-    if (!convex || isSyncing) {
-      console.log('[Convex] flushWebQueue skipped: convex=', !!convex, 'isSyncing=', isSyncing);
+    if (!convex || isSyncing || !isOnline) {
+      console.log('[Convex] flushWebQueue skipped: convex=', !!convex, 'isSyncing=', isSyncing, 'isOnline=', isOnline);
       return;
     }
     const queue = webQueueRef.current;
@@ -135,6 +115,7 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
 
     setIsSyncing(true);
     const batch = queue.splice(0, 50);
+    const failed: QueueItem[] = [];
 
     try {
       const byType = new Map<string, QueueItem[]>();
@@ -145,11 +126,26 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
       }
 
       for (const [entityType, items] of byType) {
-        if (entityType === 'profiles') {
-          for (const item of items) {
-            if (item.operation === 'upsert') {
-              const payload = JSON.parse(item.payload);
-              console.log('[Convex] flushing profile:', item.user_id, payload);
+        for (const item of items) {
+          if (item.operation !== 'upsert') {
+            failed.push(item);
+            continue;
+          }
+          try {
+            let payload: any;
+            try {
+              payload = typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
+            } catch (parseErr) {
+              console.error('[Convex] Payload parse failed, skipping item:', entityType, item.entity_id, parseErr);
+              failed.push(item);
+              continue;
+            }
+            if (entityType === 'profiles') {
+              console.log('[Convex] Calling profiles.upsert with:', {
+                user_id: item.user_id,
+                email: payload.email ?? null,
+                full_name: payload.full_name ?? null,
+              });
               await convex.mutation(api.profiles.upsert, {
                 user_id: item.user_id,
                 email: payload.email ?? null,
@@ -161,13 +157,8 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
                 onboarding_completed: payload.onboarding_completed ?? false,
                 updated_at: payload.updated_at ?? Date.now(),
               });
-            }
-          }
-        } else if (entityType === 'feedbacks') {
-          for (const item of items) {
-            if (item.operation === 'upsert') {
-              const payload = JSON.parse(item.payload);
-              console.log('[Convex] flushing feedback:', item.user_id, payload);
+              console.log('[Convex] profiles.upsert completed');
+            } else if (entityType === 'feedbacks') {
               await convex.mutation(api.feedbacks.insert, {
                 user_id: item.user_id,
                 type: payload.type,
@@ -176,13 +167,7 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
                 metadata: payload.metadata ?? null,
                 created_at: payload.created_at ?? Date.now(),
               });
-            }
-          }
-        } else if (entityType === 'app_settings') {
-          for (const item of items) {
-            if (item.operation === 'upsert') {
-              const payload = JSON.parse(item.payload);
-              console.log('[Convex] flushing app_settings:', item.user_id, payload);
+            } else if (entityType === 'app_settings') {
               await convex.mutation(api.settings.upsert, {
                 user_id: item.user_id,
                 theme: payload.theme ?? null,
@@ -193,38 +178,41 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
                 currency: payload.currency ?? null,
                 last_sync_token: payload.last_sync_token ?? null,
               });
-            }
-          }
-        } else if (entityType === 'sessions') {
-          for (const item of items) {
-            if (item.operation === 'upsert') {
-              const payload = JSON.parse(item.payload);
-              console.log('[Convex] flushing session:', item.user_id, payload);
+            } else if (entityType === 'sessions') {
+              const row = payload.items && Array.isArray(payload.items) ? payload.items[0] : payload;
               await convex.mutation(api.sessions.bulkUpsert, {
                 items: [{
                   user_id: item.user_id,
-                  check_in_time: payload.checkInTime,
-                  check_out_time: payload.checkOutTime,
-                  reason: payload.reason ?? null,
-                  reason_edited_at: payload.reasonEditedAt ?? null,
-                  updated_at: payload.updated_at ?? Date.now(),
+                  check_in_time: row.check_in_time ?? row.checkInTime,
+                  check_out_time: row.check_out_time ?? row.checkOutTime,
+                  reason: row.reason ?? null,
+                  reason_edited_at: row.reason_edited_at ?? row.reasonEditedAt ?? null,
+                  updated_at: row.updated_at ?? Date.now(),
                 }],
               });
+            } else {
+              failed.push(item);
             }
+          } catch (err) {
+            console.error('[Convex] web item failed:', entityType, item.entity_id, err);
+            failed.push(item);
           }
         }
       }
     } catch (err) {
-      console.error('Web sync flush failed:', err);
-      webQueueRef.current.unshift(...batch);
-      saveWebQueue(webQueueRef.current);
+      console.error('Web sync flush fatal error:', err);
+      failed.unshift(...batch);
     } finally {
+      if (failed.length > 0) {
+        webQueueRef.current.unshift(...failed);
+        saveWebQueue(webQueueRef.current);
+      }
       if (webQueueRef.current.length === 0) {
         try { localStorage.removeItem(QUEUE_STORAGE_KEY); } catch {}
       }
       setIsSyncing(false);
     }
-  }, [isOnline, isSyncing]);
+  }, [isOnline, isSyncing, convex]);
 
   const drainQueue = useCallback(async () => {
     const uid = deviceId || await getOrCreateDeviceId();
@@ -249,7 +237,6 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Backfill: find local rows newer than watermark and queue them
       const watermarks = await database.getAllAsync<{ entity_type: string; last_synced_ts: number }>(
         `SELECT * FROM sync_watermark WHERE user_id = ?`,
         [uid]
@@ -291,7 +278,7 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
             await database.runAsync(
               `INSERT INTO sync_queue (user_id, entity_type, entity_id, operation, payload, created_at)
                VALUES (?, ?, ?, ?, ?, ?)`,
-               [uid, entityType, entityId, 'upsert', JSON.stringify(row), Date.now()]
+              [uid, entityType, entityId, 'upsert', JSON.stringify(row), Date.now()]
             );
           }
         }
@@ -367,7 +354,63 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsSyncing(false);
     }
-  }, [deviceId, isOnline, isSyncing]);
+  }, [deviceId, isOnline, isSyncing, flushWebQueue, convex]);
+
+  const queueMutation = useCallback(async (
+    entityType: string,
+    entityId: string,
+    operation: 'upsert' | 'delete',
+    payload: any
+  ) => {
+    const uid = deviceId || await getOrCreateDeviceId();
+    if (!uid) {
+      console.error('[Convex] queueMutation ABORTED: deviceId is null/empty. Mutation cannot be assigned a user_id. Payload:', entityType, entityId);
+      return;
+    }
+    console.log('[Convex] queueMutation:', entityType, entityId, 'web=', Platform.OS === 'web', 'convex=', !!convex, 'uid=', uid.slice(0, 12));
+
+    if (Platform.OS === 'web' || !convex) {
+      enqueueWeb({ user_id: uid, entity_type: entityType, entity_id: entityId, operation, payload });
+      console.log('[Convex] enqueued to webQueue, size=', webQueueRef.current.length);
+      // Try immediate flush after enqueueing
+      if (convex && isOnline && !isSyncing) {
+        setTimeout(() => flushWebQueue(), 100);
+      }
+      return;
+    }
+
+    try {
+      const database = await import('../db/database').then(m => m.dbPromise).catch(() => null);
+      if (!database) {
+        enqueueWeb({ user_id: uid, entity_type: entityType, entity_id: entityId, operation, payload });
+        return;
+      }
+      await database.then(db => db.runAsync(
+        `INSERT INTO sync_queue (user_id, entity_type, entity_id, operation, payload, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [uid, entityType, entityId, operation, JSON.stringify(payload), Date.now()]
+      ));
+    } catch {
+      enqueueWeb({ user_id: uid, entity_type: entityType, entity_id: entityId, operation, payload });
+    }
+  }, [deviceId, enqueueWeb, flushWebQueue, isOnline, isSyncing]);
+
+  useEffect(() => {
+    let initialSkipped = false;
+    const onChange = (nextState: string) => {
+      if (!initialSkipped) {
+        initialSkipped = true;
+        return;
+      }
+      if (nextState === 'active') {
+        setTimeout(() => drainQueue(), 300);
+      }
+    };
+    const sub = AppState.addEventListener('change', onChange);
+    return () => {
+      sub.remove();
+    };
+  }, [drainQueue]);
 
   useEffect(() => {
     if (!deviceId) return;

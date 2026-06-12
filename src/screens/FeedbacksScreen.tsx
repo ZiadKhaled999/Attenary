@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -63,10 +63,22 @@ const FeedbacksScreen = () => {
   const [feedback, setFeedback] = useState('');
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('general');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [retryAttempts, setRetryAttempts] = useState(0);
   const [typeSheetVisible, setTypeSheetVisible] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const MAX_RETRY_ATTEMPTS = 3;
+
+  useEffect(() => {
+    if (!submitted) return;
+    const timer = setTimeout(() => {
+      setSubmitted(false);
+      setFeedback('');
+      setFeedbackType('general');
+      navigation.goBack();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [submitted, navigation]);
 
   useEffect(() => {
     getOrCreateDeviceId().then(setDeviceId);
@@ -129,20 +141,8 @@ const FeedbacksScreen = () => {
       }
 
       setRetryAttempts(0);
-      Alert.alert(
-        t('feedbacks.thankYou'),
-        t('feedbacks.feedbackSuccess'),
-        [
-          {
-            text: t('common.ok'),
-            onPress: () => {
-              setFeedback('');
-              setFeedbackType('general');
-              navigation.goBack();
-            },
-          },
-        ]
-      );
+      setSubmitted(true);
+      setFeedback('');
     } catch (_error) {
       const canRetry = retryAttempts < MAX_RETRY_ATTEMPTS;
       const remainingAttempts = MAX_RETRY_ATTEMPTS - retryAttempts;
@@ -259,7 +259,14 @@ const FeedbacksScreen = () => {
             </Text>
           </TouchableOpacity>
 
-          {/* Info Text */}
+          {submitted && (
+            <View style={styles.successBanner}>
+              <CheckIcon size={20} color={colors.success} />
+              <Text style={styles.successBannerText}>{t('feedbacks.successBanner')}</Text>
+            </View>
+          )}
+
+           {/* Info Text */}
           <Text style={styles.infoText}>
             {t('feedbacks.feedbackInfoText')}
           </Text>
@@ -487,6 +494,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xl,
     lineHeight: 20,
+  },
+  successBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(83,223,221,0.12)',
+    borderRadius: borderRadius.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.success,
+    gap: spacing.sm,
+  },
+  successBannerText: {
+    flex: 1,
+    fontSize: fonts.sizes.md,
+    fontWeight: fonts.weights.bold as any,
+    color: colors.textPrimary,
   },
   sheetOverlay: {
     position: 'absolute',

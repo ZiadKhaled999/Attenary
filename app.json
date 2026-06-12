@@ -4,6 +4,7 @@
     "slug": "attenary",
     "scheme": "attenary",
     "version": "3.23.7",
+    "versionCode": 32307,
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -24,22 +25,17 @@
       },
       "package": "com.oryno.attenary",
       "permissions": [
-        "android.permission.INTERNET"
-      ]
+        "android.permission.INTERNET",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "compileSdkVersion": 35,
+      "minSdkVersion": 23,
+      "targetSdkVersion": 35
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "expo-file-system",
-        {
-          "android": {
-            "writeExternalStorage": true
-          }
-        }
-      ],
-      "@react-native-community/datetimepicker",
       "expo-image-picker",
       "expo-secure-store",
       "expo-sharing",
@@ -47,10 +43,13 @@
       "expo-font"
     ],
     "extra": {
+      "EXPO_PUBLIC_CONVEX_URL": "https://beloved-hare-121.convex.cloud",
       "eas": {
         "projectId": "700790dd-4cbf-4ffd-a7c3-5d959ffb5ddf"
-      },
-      "EXPO_PUBLIC_CONVEX_URL": "https://beloved-hare-121.convex.cloud"
+      }
+    },
+    "eas": {
+      "projectId": "700790dd-4cbf-4ffd-a7c3-5d959ffb5ddf"
     },
     "owner": "orynos-organization"
   }
