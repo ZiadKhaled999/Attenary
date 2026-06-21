@@ -48,7 +48,7 @@ const ICONS: Record<string, React.ComponentType<any>> = {
 
 // ─── Easing equivalent to cubic-bezier(0.25, 1, 0.5, 1) ─────────────────────
 const FLUID_SPRING = {
-  useNativeDriver: false,
+  useNativeDriver: true,
   tension: 120,
   friction: 14,
 };
@@ -77,10 +77,8 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
   const [tabLayouts, setTabLayouts] = useState<{ x: number; y: number; width: number; height: number }[]>([]);
 
   // Animated values for the fluid backing pill
-  const pillLeft   = useRef(new Animated.Value(0)).current;
-  const pillTop    = useRef(new Animated.Value(0)).current;
-  const pillWidth  = useRef(new Animated.Value(0)).current;
-  const pillHeight = useRef(new Animated.Value(TOKEN.size4_12)).current;
+  const pillTranslateX = useRef(new Animated.Value(0)).current;
+  const pillTranslateY = useRef(new Animated.Value(0)).current;
 
   // Jelly morph scale values
   const pillScaleX = useRef(new Animated.Value(1)).current;
@@ -121,18 +119,14 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
     if (!layout) return;
 
     if (!animate) {
-      pillLeft.setValue(layout.x);
-      pillTop.setValue(layout.y);
-      pillWidth.setValue(layout.width);
-      pillHeight.setValue(layout.height);
+      pillTranslateX.setValue(layout.x);
+      pillTranslateY.setValue(layout.y);
       pillScaleX.setValue(1);
       pillScaleY.setValue(1);
     } else {
       Animated.parallel([
-        Animated.spring(pillLeft,   { toValue: layout.x,      ...FLUID_SPRING }),
-        Animated.spring(pillTop,    { toValue: layout.y,      ...FLUID_SPRING }),
-        Animated.spring(pillWidth,  { toValue: layout.width,  ...FLUID_SPRING }),
-        Animated.spring(pillHeight, { toValue: layout.height, ...FLUID_SPRING }),
+        Animated.spring(pillTranslateX, { toValue: layout.x,      ...FLUID_SPRING }),
+        Animated.spring(pillTranslateY, { toValue: layout.y,      ...FLUID_SPRING }),
       ]).start(() => {
         runJelly(pillScaleX, pillScaleY).start();
       });
@@ -211,11 +205,14 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
             style={[
               styles.fluidPill,
               {
-                left:   pillLeft,
-                top:    pillTop,
-                width:  pillWidth,
-                height: pillHeight,
-                transform: [{ scaleX: pillScaleX }, { scaleY: pillScaleY }],
+                width: tabLayouts[state.index]?.width ?? 0,
+                height: tabLayouts[state.index]?.height ?? 0,
+                transform: [
+                  { translateX: pillTranslateX },
+                  { translateY: pillTranslateY },
+                  { scaleX: pillScaleX },
+                  { scaleY: pillScaleY },
+                ],
                 zIndex: 0,
               },
             ]}

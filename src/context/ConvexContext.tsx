@@ -1,28 +1,11 @@
-import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
 import { Platform, AppState } from 'react-native';
-import { ConvexReactClient } from 'convex/react';
+import { useConvex } from 'convex/react';
 import NetInfo from '@react-native-community/netinfo';
 import { getOrCreateDeviceId } from '../utils/deviceId';
 import { api } from '../../convex/_generated/api';
 
-const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL || '';
 window.__convexDebug = window.__convexDebug || [];
-window.__convexDebug.push({ type: 'init', convexUrl, ts: Date.now() });
-console.log('[Convex] convexUrl:', convexUrl);
-const convex = convexUrl ? new ConvexReactClient(convexUrl, { unsavedChangesWarning: false }) : null;
-window.__convexDebug.push({ type: 'client', created: !!convex, ts: Date.now() });
-console.log('[Convex] client created:', !!convex);
-
-if (convex) {
-  (async () => {
-    try {
-      const result = await convex.query(api.profiles.listAll, {} as never);
-      console.log('[Convex] health-check OK: listAll returned', result?.length ?? 0, 'profiles');
-    } catch (e) {
-      console.error('[Convex] health-check FAILED:', e instanceof Error ? e.message : e);
-    }
-  })();
-}
 
 interface ConvexContextType {
   deviceId: string | null;
@@ -76,12 +59,19 @@ const saveWebQueue = (queue: QueueItem[]) => {
   } catch { /* quota exceeded */ }
 };
 
-export function ConvexProvider({ children }: { children: React.ReactNode }) {
-  const [deviceId, setDeviceId] = React.useState<string | null>(null);
-  const [isOnline, setIsOnline] = React.useState(true);
-  const [isSyncing, setIsSyncing] = React.useState(false);
+export function ConvexSyncProvider({ children }: { children: React.ReactNode }) {
+  const convex = useConvex();
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const syncTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const webQueueRef = useRef<QueueItem[]>(loadWebQueue());
+
+  useEffect(() => {
+    window.__convexDebug.push({ type: 'init', convexUrl: process.env.EXPO_PUBLIC_CONVEX_URL, ts: Date.now() });
+    console.log('[Convex] convexUrl:', process.env.EXPO_PUBLIC_CONVEX_URL);
+    console.log('[Convex] client ready (via useConvex)');
+  }, []);
 
   useEffect(() => {
     getOrCreateDeviceId().then(setDeviceId);
@@ -93,6 +83,21 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
     });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    async function checkHealth() {
+      if (!convex) return;
+      try {
+        const result = await convex.query(api.profiles.listAll, {} as never);
+        window.__convexDebug.push({ type: 'health-check', profiles: result?.length ?? 0, ts: Date.now() });
+        console.log('[Convex] health-check OK: listAll returned', result?.length ?? 0, 'profiles');
+      } catch (e) {
+        window.__convexDebug.push({ type: 'health-check-failed', error: e instanceof Error ? e.message : String(e), ts: Date.now() });
+        console.error('[Convex] health-check FAILED:', e instanceof Error ? e.message : e);
+      }
+    }
+    checkHealth();
+  }, [convex]);
 
   const enqueueWeb = useCallback((item: Omit<QueueItem, 'id' | 'created_at'>) => {
     webQueueRef.current.push({
@@ -327,19 +332,20 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
           `INSERT INTO sync_watermark (user_id, entity_type, last_synced_ts)
            VALUES (?, ?, ?)
            ON CONFLICT(user_id, entity_type) DO UPDATE SET last_synced_ts = excluded.last_synced_ts`,
-          [deviceId, entityType, ts]
+          [uid, entityType, ts]
         );
       }
 
     } catch (err) {
       console.error('[Convex] drainQueue fatal error:', err);
       const lastErr = err instanceof Error ? err.message : String(err);
-      try { await import('../db/database').then(m => m.dbPromise).then(db => db.runAsync(
-        `CREATE TABLE IF NOT EXISTS _convex_debug (key TEXT PRIMARY KEY, value TEXT)`
-      )).then(() => import('../db/database').then(m => m.dbPromise).then(db =>
-        db.runAsync(`INSERT OR REPLACE INTO _convex_debug (key, value) VALUES (?, ?)`,
-          ['last_sync_error', lastErr])
-      )).catch(() => {}); } catch {}
+      try {
+        await import('../db/database')
+          .then(m => m.dbPromise)
+          .then(db => db.runAsync(`CREATE TABLE IF NOT EXISTS _convex_debug (key TEXT PRIMARY KEY, value TEXT)`))
+          .then(() => import('../db/database').then(m => m.dbPromise).then(db => db.runAsync(`INSERT OR REPLACE INTO _convex_debug (key, value) VALUES (?, ?)`, ['last_sync_error', lastErr])))
+          .catch(() => {});
+      } catch { }
       if (pending.length > 0) {
         const database = await import('../db/database').then(m => m.dbPromise).catch(() => null);
         if (database) {
@@ -372,7 +378,6 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
     if (Platform.OS === 'web' || !convex) {
       enqueueWeb({ user_id: uid, entity_type: entityType, entity_id: entityId, operation, payload });
       console.log('[Convex] enqueued to webQueue, size=', webQueueRef.current.length);
-      // Try immediate flush after enqueueing
       if (convex && isOnline && !isSyncing) {
         setTimeout(() => flushWebQueue(), 100);
       }
@@ -393,7 +398,7 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
     } catch {
       enqueueWeb({ user_id: uid, entity_type: entityType, entity_id: entityId, operation, payload });
     }
-  }, [deviceId, enqueueWeb, flushWebQueue, isOnline, isSyncing]);
+  }, [deviceId, enqueueWeb, flushWebQueue, isOnline, isSyncing, convex]);
 
   useEffect(() => {
     let initialSkipped = false;
@@ -436,7 +441,7 @@ export function ConvexProvider({ children }: { children: React.ReactNode }) {
 
 export const useConvexSync = () => {
   const ctx = useContext(ConvexContext);
-  if (!ctx) throw new Error('useConvexSync must be inside ConvexProvider');
+  if (!ctx) throw new Error('useConvexSync must be inside ConvexSyncProvider');
   return ctx;
 };
 

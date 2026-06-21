@@ -100,6 +100,7 @@ const translations: Record<Language, Record<string, string>> = {
     'bossExport.shareFailed': 'Failed to share report.',
     'bossExport.reportSubject': 'Attenary Report - {month} {year}',
     
+    'restoreBackup.title': 'Restore Backup',
     'restoreBackup.subtitle': 'Restore from a backup file',
     
     // Languages Screen

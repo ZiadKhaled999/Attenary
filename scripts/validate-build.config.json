@@ -1,0 +1,28 @@
+{
+  "checks": [
+    {
+      "name": "app.json is valid JSON",
+      "run": "node -e \"try{JSON.parse(require('fs').readFileSync('app.json','utf8'))}catch(e){console.error(e);process.exit(1)}\""
+    },
+    {
+      "name": "EAS eas.json is valid JSON",
+      "run": "node -e \"try{JSON.parse(require('fs').readFileSync('eas.json','utf8'))}catch(e){console.error(e);process.exit(1)}\""
+    },
+    {
+      "name": "No APK/AAB artifacts in Android build target paths",
+      "run": "node -e \"const fs=require('fs');try{const entries=fs.readdirSync('.',{withFileTypes:true});const bad=entries.filter(e=>e.name.endsWith('.apk')||e.name.endsWith('.aab')||e.name.endsWith('.apks'));if(bad.length){console.error('Build artifacts found:',bad.map(e=>e.name).join(', '));process.exit(1);}}catch(e){console.error(e);process.exit(1)}\""
+    },
+    {
+      "name": "No global __CONVEX_URL__ assignment in source files",
+      "run": "node -e \"const fs=require('fs');const path=require('path');const {execSync}=require('child_process');try{const files=execSync('rg --files src || true').toString().trim().split(/\\n/).filter(Boolean);const bad=[];for(const f of files){const c=fs.readFileSync(f,'utf8');if(/global\\.__CONVEX_URL__|window\\.__convex_debug|__convexDebug/i.test(c)){bad.push(f);}}if(bad.length){console.error('Forbidden debug globals found:',bad.join(', '));process.exit(1);}}catch(e){if(e.status!==1)console.error(e);process.exit(1)}\""
+    },
+    {
+      "name": "Only whitelisted Expo plugins in app.json",
+      "run": "node -e \"const fs=require('fs'),path=require('path');const allowed=new Set(['expo-image-picker','expo-secure-store','expo-sharing','expo-sqlite','expo-font','expo-document-picker','expo-print','expo-local-authentication','expo-crypto','expo-linking','expo-file-system','expo-blur','expo-clipboard','expo-status-bar','expo-system-ui']);const cfg=JSON.parse(fs.readFileSync('app.json','utf8')).expo;const plugins=[].concat(cfg.plugins||[]);const bad=plugins.filter(p=>typeof p==='string'?!allowed.has(p):Array.isArray(p)?!allowed.has(p[0]):true);if(bad.length){console.error('Unknown plugins:',JSON.stringify(bad));process.exit(1)}\""
+    },
+    {
+      "name": ".env contains only non-secret EXPO_PUBLIC_CONVEX_URL",
+      "run": "node -e \"const fs=require('fs');if(!fs.existsSync('.env')){process.exit(0);}const c=fs.readFileSync('.env','utf8');if(/^(KEY|SECRET|TOKEN|PASSWORD|PRIVATE)\\s*=/im.test(c)){console.error('.env contains secret key');process.exit(1);}\""
+    }
+  ]
+}

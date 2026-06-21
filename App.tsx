@@ -4,15 +4,22 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { View, Text, StyleSheet, Alert, Platform, ScrollView } from 'react-native';
 import { Provider } from './src/context/AppContext';
-import { ConvexProvider } from './src/context/ConvexContext';
+import { ConvexProvider, ConvexReactClient } from 'convex/react';
+import { ConvexIdentityProvider } from './src/context/ConvexIdentityProvider';
+import { ConvexSyncProvider } from './src/context/ConvexContext';
 import Navigation from './src/navigation/Navigation';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { LanguageProvider } from './src/context/LanguageContext';
 import { colors } from './src/theme/colors';
-import Svg, { Path, Polygon, Line, Circle } from 'react-native-svg';
+import Svg, { Polygon, Line, Circle } from 'react-native-svg';
 import { checkForUpdate, downloadAndInstallUpdate, UpdateInfo } from './src/utils/updateService';
 import { UpdateBottomSheet } from './src/components/UpdateBottomSheet';
 import { shouldShowUpdate, setDismissedAt } from './src/utils/updateStorage';
+
+const CONVEX_URL = process.env.EXPO_PUBLIC_CONVEX_URL || 'https://beloved-hare-121.convex.cloud';
+const convex = new ConvexReactClient(CONVEX_URL, {
+  unsavedChangesWarning: false,
+});
 
 // Global error handlers to prevent Android crashes
 if (Platform.OS !== 'web') {
@@ -221,16 +228,20 @@ export default function App() {
             <ContextErrorBoundary>
               <ThemeProvider>
                 <ContextErrorBoundary>
-              <LanguageProvider>
-                <ContextErrorBoundary>
-                <Provider>
-                  <StatusBar style="light" backgroundColor="#0f172a" />
-                  <ConvexProvider>
-                    <Navigation />
-                  </ConvexProvider>
-                </Provider>
-                </ContextErrorBoundary>
-              </LanguageProvider>
+                  <LanguageProvider>
+                    <ContextErrorBoundary>
+                      <ConvexProvider client={convex}>
+                        <ConvexIdentityProvider>
+                          <ConvexSyncProvider>
+                            <Provider>
+                              <StatusBar style="light" backgroundColor="#0f172a" />
+                              <Navigation />
+                            </Provider>
+                          </ConvexSyncProvider>
+                        </ConvexIdentityProvider>
+                      </ConvexProvider>
+                    </ContextErrorBoundary>
+                  </LanguageProvider>
                 </ContextErrorBoundary>
               </ThemeProvider>
             </ContextErrorBoundary>

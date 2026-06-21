@@ -1,0 +1,17 @@
+{
+  "name": "Attenary Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
+  "features": {},
+  "runArgs": ["--env=NODE_OPTIONS=--max_old_space_size=4096"],
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y libatk1.0-0 libatk-bridge2.0-0 libnss3 libx11-xcb1 libxcb-dri3-0 libdrm2 libgbm1 libasound2t64 libxss1 libgtk-3-0 && rm -rf /var/lib/apt/lists/*",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "expo.vscode-expo-tools"
+      ]
+    }
+  },
+  "postStartCommand": "nvm use || true"
+}

@@ -1,7 +1,18 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
 # Secrets
 .env
+
+# Metadata/env variants
+.env.example
+.env.local
+.env.*.local
+
+# Android signatures/credentials
+*.jks
+*.keystore
+*.p12
+*.pem
+*.pub
+*.pfx
 
 # dependencies
 node_modules/
@@ -18,11 +29,7 @@ expo-env.d.ts
 *.apks
 *.jar
 *.zip
-*.keystore
-
 
 # Native folders
 /android
 /ios
-
-.env.local
