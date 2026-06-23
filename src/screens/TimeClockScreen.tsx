@@ -251,7 +251,7 @@ const TimeClockScreen = () => {
               <View style={[styles.statusDot, { backgroundColor: activeSession ? colors.textSuccess : colors.textWarning }]} />
               <Text style={styles.metricLabel}>{t('timeclock.sessionStatus')}</Text>
             </View>
-            <Text style={[styles.metricValue, { color: activeSession ? colors.textSuccess : colors.white }]}>
+            <Text style={[styles.metricValue, { color: colors.white }]}>
               {activeSession ? t('timeclock.activeSession') : t('timeclock.idle')}
             </Text>
             

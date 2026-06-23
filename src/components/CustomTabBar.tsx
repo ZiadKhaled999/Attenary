@@ -12,7 +12,7 @@ import { BlurView } from 'expo-blur';
 import { Home, CalendarDays, FileText, History, BarChart3, User, MoreHorizontal } from 'lucide-react-native';
 import { useTabBarVisibility } from '../context/TabBarVisibilityContext';
 
-// ─── Design tokens (mirrors Navbar.html CSS vars) ───────────────────────────
+// ─── Design tokens ───────────────────────────────────────────────────────────
 const TOKEN = {
   base00: '#1e1e1e',
   base05: '#212121',
@@ -25,7 +25,7 @@ const TOKEN = {
   base60: '#999999',
   base70: '#bababa',
   base100: '#dadada',
-  accentPrimary: 'hsl(254, 80%, 68%)',   // --interactive-accent
+  accentPrimary: 'hsl(254, 80%, 68%)',
   white: '#ffffff',
   size4_2: 8,
   size4_3: 12,
@@ -35,7 +35,7 @@ const TOKEN = {
   size4_12: 48,
 };
 
-// ─── Icon map: screen name → Lucide component ────────────────────────────────
+// ─── Icon map ─────────────────────────────────────────────────────────────────
 const ICONS: Record<string, React.ComponentType<any>> = {
   TimeClock:     Home,
   DailyLog:      CalendarDays,
@@ -46,74 +46,63 @@ const ICONS: Record<string, React.ComponentType<any>> = {
   More:          MoreHorizontal,
 };
 
-// ─── Easing equivalent to cubic-bezier(0.25, 1, 0.5, 1) ─────────────────────
-const FLUID_SPRING = {
-  useNativeDriver: true,
-  tension: 120,
-  friction: 14,
-};
-
-// ─── Jelly keyframes: scaleX(1.15/0.9) → scaleY(0.85/1.05) ─────────────────
-function runJelly(scaleX: Animated.Value, scaleY: Animated.Value) {
-  return Animated.sequence([
-    Animated.parallel([
-      Animated.timing(scaleX, { toValue: 1.15, duration: 120, useNativeDriver: true }),
-      Animated.timing(scaleY, { toValue: 0.85, duration: 120, useNativeDriver: true }),
-    ]),
-    Animated.parallel([
-      Animated.timing(scaleX, { toValue: 0.9,  duration: 120, useNativeDriver: true }),
-      Animated.timing(scaleY, { toValue: 1.05, duration: 120, useNativeDriver: true }),
-    ]),
-    Animated.parallel([
-      Animated.timing(scaleX, { toValue: 1,    duration: 80,  useNativeDriver: true }),
-      Animated.timing(scaleY, { toValue: 1,    duration: 80,  useNativeDriver: true }),
-    ]),
-  ]);
-}
-
 // ─── Component ───────────────────────────────────────────────────────────────
 const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
-  // Layout slots measured per tab button
   const [tabLayouts, setTabLayouts] = useState<{ x: number; y: number; width: number; height: number }[]>([]);
 
-  // Animated values for the fluid backing pill
+  // ALL animated values use useNativeDriver: true (transforms + opacity support it)
   const pillTranslateX = useRef(new Animated.Value(0)).current;
   const pillTranslateY = useRef(new Animated.Value(0)).current;
-
-  // Jelly morph scale values
   const pillScaleX = useRef(new Animated.Value(1)).current;
   const pillScaleY = useRef(new Animated.Value(1)).current;
 
-  // Per-icon animated opacities & translateY
   const iconAnims = useRef(
     state.routes.map(() => ({
-      opacity:     new Animated.Value(0.4),
-      translateY:  new Animated.Value(0),
+      opacity:    new Animated.Value(0.4),
+      translateY: new Animated.Value(0),
     }))
   ).current;
 
-  // Track whether this is first render (no animation, just snap)
   const isFirstRender = useRef(true);
 
-  const { visible, setVisible } = useTabBarVisibility();
-  const tabBarOpacity = useRef(new Animated.Value(1)).current;
+  const { visible } = useTabBarVisibility();
+  const tabBarOpacity    = useRef(new Animated.Value(1)).current;
   const tabBarTranslateY = useRef(new Animated.Value(0)).current;
 
+  // ── Visibility animation — useNativeDriver: true ──────────────────────────
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.spring(tabBarOpacity,   { toValue: 1, tension: 120, friction: 14, useNativeDriver: true }),
+        Animated.spring(tabBarOpacity,    { toValue: 1, tension: 120, friction: 14, useNativeDriver: true }),
         Animated.spring(tabBarTranslateY, { toValue: 0, tension: 120, friction: 14, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(tabBarOpacity,   { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(tabBarOpacity,    { toValue: 0, duration: 200, useNativeDriver: true }),
         Animated.timing(tabBarTranslateY, { toValue: 80, duration: 220, useNativeDriver: true }),
       ]).start();
     }
-  }, [visible, setVisible]);
+  }, [visible]);
 
-  // ── Move pill to active tab ──────────────────────────────────────────────
+  // ── Jelly — useNativeDriver: true (scale is a transform, supported) ────────
+  function runJelly(scaleX: Animated.Value, scaleY: Animated.Value) {
+    return Animated.sequence([
+      Animated.parallel([
+        Animated.timing(scaleX, { toValue: 1.15, duration: 120, useNativeDriver: true }),
+        Animated.timing(scaleY, { toValue: 0.85, duration: 120, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(scaleX, { toValue: 0.9,  duration: 120, useNativeDriver: true }),
+        Animated.timing(scaleY, { toValue: 1.05, duration: 120, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(scaleX, { toValue: 1,    duration: 80,  useNativeDriver: true }),
+        Animated.timing(scaleY, { toValue: 1,    duration: 80,  useNativeDriver: true }),
+      ]),
+    ]);
+  }
+
+  // ── Move pill — useNativeDriver: true ─────────────────────────────────────
   function movePillTo(index: number, animate: boolean) {
     const layout = tabLayouts[index];
     if (!layout) return;
@@ -125,18 +114,18 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
       pillScaleY.setValue(1);
     } else {
       Animated.parallel([
-        Animated.spring(pillTranslateX, { toValue: layout.x,      ...FLUID_SPRING }),
-        Animated.spring(pillTranslateY, { toValue: layout.y,      ...FLUID_SPRING }),
+        Animated.spring(pillTranslateX, { toValue: layout.x, useNativeDriver: true, tension: 120, friction: 14 }),
+        Animated.spring(pillTranslateY, { toValue: layout.y, useNativeDriver: true, tension: 120, friction: 14 }),
       ]).start(() => {
         runJelly(pillScaleX, pillScaleY).start();
       });
     }
   }
 
-  // ── Update icons (active vs inactive) ────────────────────────────────────
+  // ── Icon sync — useNativeDriver: true ────────────────────────────────────
   function syncIcons(activeIndex: number, animate: boolean) {
     iconAnims.forEach((anim, i) => {
-      const isActive = i === activeIndex;
+      const isActive     = i === activeIndex;
       const targetOpacity = isActive ? 1 : 0.4;
       const targetY       = isActive ? -1 : 0;
 
@@ -152,7 +141,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
     });
   }
 
-  // ── Re-position pill whenever active tab OR layouts change ───────────────
+  // ── Re-position pill when active tab or layouts change ───────────────────
   useEffect(() => {
     if (tabLayouts.length !== state.routes.length) return;
     const animate = !isFirstRender.current;
@@ -161,7 +150,6 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
     if (isFirstRender.current) isFirstRender.current = false;
   }, [state.index, tabLayouts]);
 
-  // ── Capture individual tab button layout ─────────────────────────────────
   const handleTabLayout = (index: number) => (e: LayoutChangeEvent) => {
     const { x, y, width, height } = e.nativeEvent.layout;
     setTabLayouts(prev => {
@@ -171,7 +159,6 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
     });
   };
 
-  // ── Handle tap ────────────────────────────────────────────────────────────
   const handlePress = (route: typeof state.routes[0], index: number) => {
     if (state.index === index) return;
     const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -180,7 +167,6 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <Animated.View
       style={[
@@ -192,20 +178,18 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
       ]}
       pointerEvents={visible ? 'auto' : 'none'}
     >
-      {/* Glassmorphism panel */}
       <View style={styles.glassPanel}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
         ) : null}
 
-        {/* Tab buttons */}
         <View style={styles.tabRow}>
-          {/* Fluid backing pill — rendered first so buttons stack above it */}
+          {/* Pill — transform only, native driver safe */}
           <Animated.View
             style={[
               styles.fluidPill,
               {
-                width: tabLayouts[state.index]?.width ?? 0,
+                width:  tabLayouts[state.index]?.width ?? 0,
                 height: tabLayouts[state.index]?.height ?? 0,
                 transform: [
                   { translateX: pillTranslateX },
@@ -220,9 +204,9 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
           />
 
           {state.routes.map((route, index) => {
-            const isActive = state.index === index;
+            const isActive      = state.index === index;
             const IconComponent = ICONS[route.name] ?? MoreHorizontal;
-            const anim = iconAnims[index];
+            const anim          = iconAnims[index];
 
             return (
               <TouchableOpacity
@@ -257,15 +241,13 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
                 </Animated.View>
               </TouchableOpacity>
             );
-           })}
-
+          })}
         </View>
       </View>
     </Animated.View>
   );
 };
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   outerWrapper: {
     position: 'absolute',
@@ -274,7 +256,6 @@ const styles = StyleSheet.create({
     right: 16,
     alignItems: 'center',
   },
-
   glassPanel: {
     width: '100%',
     maxWidth: 480,
@@ -290,7 +271,6 @@ const styles = StyleSheet.create({
     shadowRadius: 40,
     elevation: 24,
   },
-
   fluidPill: {
     position: 'absolute',
     borderRadius: TOKEN.size4_6,
@@ -301,7 +281,6 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 8,
   },
-
   tabRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -309,7 +288,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     zIndex: 10,
   },
-
   tabButton: {
     flex: 1,
     height: TOKEN.size4_12,

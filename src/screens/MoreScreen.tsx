@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Platform, Alert, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, borderRadius, fonts } from '../theme/colors';
+import { colors, spacing, fonts, shadows } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
 import * as Sharing from 'expo-sharing';
 
@@ -145,43 +145,58 @@ const MoreScreen = () => {
     }
   };
 
+  const groups = [
+    {
+      label: t('more.groupGeneral'),
+      items: [navItems[0], navItems[1]],
+    },
+    {
+      label: t('more.groupData'),
+      items: [navItems[2], navItems[3]],
+    },
+    {
+      label: t('more.groupReports'),
+      items: [navItems[6], navItems[7]],
+    },
+    {
+      label: t('more.groupSupport'),
+      items: [navItems[4], navItems[5]],
+    },
+  ];
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bgMain} />
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerSection}>
-          <Text style={styles.headerLabel}>{t('common.settingsInfo')}</Text>
-        </View>
-
-        <View style={styles.glassPanel}>
-          {navItems.map((item, index) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.navItem,
-                index !== navItems.length - 1 && styles.navItemBorder,
-              ]}
-              onPress={() => handlePress(item)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.navItemIcon}>
-                {item.icon}
-              </View>
-              <View style={styles.navItemContent}>
-                <Text style={styles.navItemTitle}>{item.title}</Text>
-                <Text style={styles.navItemSubtitle}>{item.subtitle}</Text>
-              </View>
-              <View style={styles.chevronContainer}>
-                <ChevronRightIcon size={16} />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerTitle}>Attenary</Text>
-          <Text style={styles.footerSubtitle}>Time Tracking Made Simple</Text>
-        </View>
+        {groups.map((group, gIdx) => (
+          <View key={group.label} style={styles.group}>
+            <Text style={styles.groupLabel}>{group.label}</Text>
+            <View style={styles.groupPanel}>
+              {group.items.map((item, index) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.navItem,
+                    index !== group.items.length - 1 && styles.navItemBorder,
+                  ]}
+                  onPress={() => handlePress(item)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.navItemIcon}>
+                    {item.icon}
+                  </View>
+                  <View style={styles.navItemContent}>
+                    <Text style={styles.navItemTitle}>{item.title}</Text>
+                    <Text style={styles.navItemSubtitle}>{item.subtitle}</Text>
+                  </View>
+                  <View style={styles.chevronContainer}>
+                    <ChevronRightIcon size={16} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ))}
       </ScrollView>
     </View>
   );
@@ -191,49 +206,43 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bgMain,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
     paddingBottom: spacing.huge,
-    paddingTop: spacing.xl,
-    justifyContent: 'center',
+    paddingTop: spacing.xxxl,
+    justifyContent: 'flex-start',
   },
-  headerSection: {
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
+  group: {
+    marginBottom: spacing.xxl,
   },
-  headerLabel: {
-    fontSize: fonts.sizes.xs,
+  groupLabel: {
+    fontSize: fonts.sizes.lg,
     fontWeight: fonts.weights.bold as any,
-    color: colors.textAccent,
+    color: colors.white,
     textTransform: 'uppercase',
     letterSpacing: 2,
-    textAlign: 'center',
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
-  glassPanel: {
-    flex: 1,
+  groupPanel: {
     backgroundColor: colors.bgCard,
-    borderRadius: 28,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 32,
-    elevation: 8,
-    marginHorizontal: spacing.md,
-    justifyContent: 'space-between',
+    ...shadows.glass,
+    marginHorizontal: spacing.lg,
   },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 18,
     marginHorizontal: spacing.xs,
     marginVertical: 2,
   },
@@ -269,26 +278,6 @@ const styles = StyleSheet.create({
   chevronContainer: {
     marginLeft: spacing.sm,
     opacity: 0.6,
-  },
-  footer: {
-    width: '100%',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center',
-    paddingTop: spacing.lg,
-  },
-  footerTitle: {
-    fontSize: fonts.sizes.md,
-    fontWeight: fonts.weights.semibold as any,
-    color: colors.textPrimary,
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
-  },
-  footerSubtitle: {
-    fontSize: fonts.sizes.sm,
-    color: colors.textMuted,
-    fontWeight: fonts.weights.medium as any,
   },
 });
 
